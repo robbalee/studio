@@ -1,3 +1,4 @@
+
 "use client";
 
 import type React from 'react';
@@ -84,11 +85,21 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             documentDataUri: newClaimData.documentUri,
             documentType: docType,
           });
-          extractedInfo = extractionResult.extractedInformation;
-          addNotification({ title: 'Document Processed', message: `Successfully extracted info from ${newClaimData.documentName}.`, type: 'success', claimId: id });
+          if (extractionResult.extractedInformation) {
+            try {
+              extractedInfo = JSON.parse(extractionResult.extractedInformation);
+            } catch (e) {
+              console.error("Failed to parse extractedInformation JSON string:", e);
+              addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON format.`, type: 'error', claimId: id });
+              extractedInfo = { parsingError: "Failed to parse AI response for extracted information." };
+            }
+          }
+          if (extractedInfo && !extractedInfo.parsingError) {
+            addNotification({ title: 'Document Processed', message: `Successfully extracted info from ${newClaimData.documentName}.`, type: 'success', claimId: id });
+          }
         } catch (error) {
-          console.error("Error processing document:", error);
-          addNotification({ title: 'Document Processing Failed', message: `Could not extract info from ${newClaimData.documentName}.`, type: 'error', claimId: id });
+          console.error("Error processing document with AI:", error);
+          addNotification({ title: 'Document Processing Failed', message: `AI could not extract info from ${newClaimData.documentName}.`, type: 'error', claimId: id });
         }
       }
 
@@ -117,7 +128,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       };
 
       setClaims(prevClaims => [fullClaim, ...prevClaims]);
-      addNotification({ title: 'Claim Submitted', message: `New claim #${id} by ${fullClaim.claimantName} received.`, type: 'success', claimId: id });
+      addNotification({ title: 'Claim Submitted', message: `New claim #${id.substring(0,12)}... by ${fullClaim.claimantName} received.`, type: 'success', claimId: id });
       setIsLoading(false);
       return fullClaim;
     } catch (error) {
@@ -134,7 +145,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         claim.id === claimId ? { ...claim, status, notes: notes || claim.notes, lastUpdatedDate: new Date().toISOString() } : claim
       )
     );
-    addNotification({ title: 'Claim Updated', message: `Claim #${claimId} status changed to ${status}.`, type: 'info', claimId });
+    addNotification({ title: 'Claim Updated', message: `Claim #${claimId.substring(0,12)}... status changed to ${status}.`, type: 'info', claimId });
   }, []);
 
   const getClaimById = useCallback((claimId: string) => {

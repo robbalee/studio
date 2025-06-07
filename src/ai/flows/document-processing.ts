@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -23,8 +24,10 @@ export type ExtractDocumentInformationInput = z.infer<typeof ExtractDocumentInfo
 
 const ExtractDocumentInformationOutputSchema = z.object({
   extractedInformation: z
-    .record(z.string(), z.string())
-    .describe('A key-value object containing the extracted information from the document.'),
+    .string()
+    .describe(
+      'A JSON string representing a key-value object containing the extracted information from the document. Example: "{\\"policyNumber\\": \\"1234567890\\", \\"claimantName\\": \\"John Doe\\", \\"dateOfAccident\\": \\"2024-01-01\\"}"'
+    ),
 });
 export type ExtractDocumentInformationOutput = z.infer<typeof ExtractDocumentInformationOutputSchema>;
 
@@ -43,15 +46,13 @@ You will use this information to extract relevant information from the document 
 Document Type: {{{documentType}}}
 Document: {{media url=documentDataUri}}
 
-Extract all relevant information from the document and return it as a key-value object. Be as comprehensive as possible.
+Extract all relevant information from the document.
+The output should be a single field named "extractedInformation".
+The value of "extractedInformation" must be a JSON string representing a key-value object.
+Be as comprehensive as possible with the keys and values in the JSON object.
 
-Example Output:
-{
-  "policyNumber": "1234567890",
-  "claimantName": "John Doe",
-  "dateOfAccident": "2024-01-01",
-  "descriptionOfAccident": "Details of the accident..."
-}
+Example value for the "extractedInformation" field (a JSON string):
+"{\"policyNumber\": \"1234567890\", \"claimantName\": \"John Doe\", \"dateOfAccident\": \"2024-01-01\", \"descriptionOfAccident\": \"Details of the accident...\"}"
 `,
 });
 
