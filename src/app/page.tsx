@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2, BarChart3 } from 'lucide-react';
+import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 
@@ -41,6 +41,7 @@ export default function WelcomePage() {
               layout="fill"
               objectFit="cover"
               className="group-hover:scale-105 transition-transform duration-300"
+              
             />
              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
           </div>
