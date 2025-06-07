@@ -20,7 +20,7 @@ export default function WelcomePage() {
             </Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard">Go to Dashboard</Link>
+            <Link href="/dashboard">Dashboard</Link>
           </Button>
         </div>
       </header>
@@ -89,3 +89,4 @@ function FeatureItem({ icon, title, description }: FeatureItemProps) {
     </div>
   );
 }
+
