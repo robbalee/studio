@@ -125,6 +125,29 @@ export default function WelcomePage() {
           </div>
         </section>
 
+        {/* Customer Success Stories Section */}
+        <section className="w-full max-w-5xl py-12 md:py-16">
+          <h3 className="text-3xl font-bold font-headline text-foreground mb-12 text-center">
+            Real Stories, Real Relief
+          </h3>
+          <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-8">
+            <SuccessStoryCard
+              quote="I couldn't believe how fast my claim was processed! What used to take weeks was sorted in days."
+              story="After a minor car accident, Sarah was dreading the usual lengthy claims process. With ClaimIntel, she submitted her documents and photos from her phone in minutes. Her claim was reviewed and approved within 48 hours."
+              name="Sarah M."
+              imageSrc="https://placehold.co/80x80.png"
+              imageHint="happy person"
+            />
+            <SuccessStoryCard
+              quote="ClaimIntel made submitting my water damage claim so straightforward. No confusing forms, just a simple process."
+              story="When a pipe burst in David's kitchen, he was overwhelmed. ClaimIntel's guided submission process helped him upload all necessary information, including videos of the damage, leading to a quick assessment and approval for repairs."
+              name="David K."
+              imageSrc="https://placehold.co/80x80.png"
+              imageHint="satisfied customer"
+            />
+          </div>
+        </section>
+
         {/* AI-Powered Insights Section */}
         <section className="w-full max-w-5xl mb-16 md:mb-24">
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">AI-Powered Insights in Action</h3>
@@ -178,29 +201,6 @@ export default function WelcomePage() {
                 ClaimIntel transforms complex data into clear, actionable insights, empowering faster, more accurate decision-making for claims handlers.
               </p>
             </div>
-          </div>
-        </section>
-
-        {/* Customer Success Stories Section */}
-        <section className="w-full max-w-5xl py-12 md:py-16">
-          <h3 className="text-3xl font-bold font-headline text-foreground mb-12 text-center">
-            Real Stories, Real Relief
-          </h3>
-          <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-8">
-            <SuccessStoryCard
-              quote="I couldn't believe how fast my claim was processed! What used to take weeks was sorted in days."
-              story="After a minor car accident, Sarah was dreading the usual lengthy claims process. With ClaimIntel, she submitted her documents and photos from her phone in minutes. Her claim was reviewed and approved within 48 hours."
-              name="Sarah M."
-              imageSrc="https://placehold.co/80x80.png"
-              imageHint="happy person"
-            />
-            <SuccessStoryCard
-              quote="ClaimIntel made submitting my water damage claim so straightforward. No confusing forms, just a simple process."
-              story="When a pipe burst in David's kitchen, he was overwhelmed. ClaimIntel's guided submission process helped him upload all necessary information, including videos of the damage, leading to a quick assessment and approval for repairs."
-              name="David K."
-              imageSrc="https://placehold.co/80x80.png"
-              imageHint="satisfied customer"
-            />
           </div>
         </section>
 
