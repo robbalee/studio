@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2, Quote, Star } from 'lucide-react';
+import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2, Quote, Star, Car, Camera, Video, FileUp, BrainCircuit, ArrowRight, BrainCog, SearchCheck, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 
@@ -82,6 +82,45 @@ export default function WelcomePage() {
               value="2 Days Average"
               title="Claim Resolution Time"
               description="Streamline your processes from 14 days to just 2, significantly improving operational efficiency and customer satisfaction."
+            />
+          </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section className="w-full max-w-6xl mb-16 md:mb-24">
+          <h3 className="text-3xl font-bold font-headline text-foreground mb-12 text-center">
+            From Incident to Insight: Your ClaimIntel Journey
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-start">
+            <HowItWorksStepCard
+              stepNumber="1"
+              icon={<Smartphone className="h-10 w-10 text-primary mb-3" />}
+              title="Report Your Incident"
+              description="After a car accident, access ClaimIntel easily from your phone. Our guided process makes starting a claim simple."
+            />
+            <HowItWorksStepCard
+              stepNumber="2"
+              icon={<div className="flex justify-center items-center gap-2 mb-3"><Camera className="h-8 w-8 text-primary" /><Video className="h-8 w-8 text-primary" /><FileUp className="h-8 w-8 text-primary" /></div>}
+              title="Add Details & Media"
+              description="Describe what happened and effortlessly upload photos, dashcam footage, and relevant documents."
+            />
+            <HowItWorksStepCard
+              stepNumber="3"
+              icon={<div className="flex flex-col items-center mb-3"><div className="flex items-center"><ShieldCheck className="h-8 w-8 text-green-500 mr-1" /> <ArrowRight className="h-7 w-7 text-muted-foreground mx-1" /> <BrainCircuit className="h-10 w-10 text-primary" /></div></div>}
+              title="Data Flies to ClaimIntel AI"
+              description="Your information is securely transmitted to our intelligent platform, ready for AI analysis."
+            />
+            <HowItWorksStepCard
+              stepNumber="4"
+              icon={<BrainCog className="h-10 w-10 text-primary mb-3" />}
+              title="Intelligent Processing"
+              description="Our AI verifies details, cross-references info, assesses the situation, and identifies key insights or fraud indicators."
+            />
+            <HowItWorksStepCard
+              stepNumber="5"
+              icon={<div className="flex justify-center items-center gap-2 mb-3"><Sparkles className="h-10 w-10 text-yellow-400" /> <CheckCircle2 className="h-10 w-10 text-green-500" /></div>}
+              title="Insights & Faster Resolution"
+              description="ClaimIntel delivers clear insights to insurers, speeding up decisions. You get faster updates and resolution."
             />
           </div>
         </section>
@@ -217,6 +256,31 @@ function ImpactStatCard({ icon, value, title, description }: ImpactStatCardProps
     </Card>
   );
 }
+
+interface HowItWorksStepCardProps {
+  stepNumber: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+function HowItWorksStepCard({ stepNumber, icon, title, description }: HowItWorksStepCardProps) {
+  return (
+    <Card className="text-center p-6 shadow-lg hover:shadow-xl transition-shadow bg-card/70 backdrop-blur-sm flex flex-col items-center h-full">
+      <div className="relative mb-2">
+        <div className="absolute -top-3 -left-3 bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold">
+          {stepNumber}
+        </div>
+        {icon}
+      </div>
+      <CardTitle className="text-lg font-semibold mb-2 mt-2">{title}</CardTitle>
+      <CardDescription className="text-sm text-muted-foreground leading-relaxed">
+        {description}
+      </CardDescription>
+    </Card>
+  );
+}
+
 
 interface SuccessStoryCardProps {
   quote: string;
