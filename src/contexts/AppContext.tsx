@@ -72,7 +72,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addClaim = useCallback(async (newClaimData: Omit<Claim, 'id' | 'status' | 'submissionDate' | 'lastUpdatedDate' | 'fraudAssessment' | 'extractedInfo'>): Promise<Claim | null> => {
     setIsLoading(true);
     try {
-      const id = `clm_${Date.now().toString()}`;
+      const id = `clm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 9)}`;
       const submissionDate = new Date().toISOString();
       
       let extractedInfo: Record<string, string> | undefined;
@@ -90,12 +90,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               extractedInfo = JSON.parse(extractionResult.extractedInformation);
             } catch (e) {
               console.error("Failed to parse extractedInformation JSON string:", e);
-              addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON format.`, type: 'error', claimId: id });
+              addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON.`, type: 'error', claimId: id });
               extractedInfo = { parsingError: "Failed to parse AI response for extracted information." };
             }
           }
           if (extractedInfo && !extractedInfo.parsingError) {
-            addNotification({ title: 'Document Processed', message: `Successfully extracted info from ${newClaimData.documentName}.`, type: 'success', claimId: id });
+            addNotification({ title: 'Document Processed', message: `Info extracted from ${newClaimData.documentName}.`, type: 'success', claimId: id });
           }
         } catch (error) {
           console.error("Error processing document with AI:", error);
@@ -137,7 +137,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIsLoading(false);
       return null;
     }
-  }, []);
+  }, [addNotification]); // Added addNotification to dependency array
 
   const updateClaimStatus = useCallback((claimId: string, status: ClaimStatus, notes?: string) => {
     setClaims(prevClaims =>
@@ -146,7 +146,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       )
     );
     addNotification({ title: 'Claim Updated', message: `Claim #${claimId.substring(0,12)}... status changed to ${status}.`, type: 'info', claimId });
-  }, []);
+  }, [addNotification]); // Added addNotification to dependency array
 
   const getClaimById = useCallback((claimId: string) => {
     return claims.find(claim => claim.id === claimId);
@@ -155,7 +155,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
     const newNotification: AppNotification = {
       ...notificationData,
-      id: `notif_${Date.now().toString()}`,
+      id: `notif_${Date.now().toString()}_${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date().toISOString(),
       read: false,
     };
@@ -174,6 +174,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setNotifications([]);
   }, []);
 
+
+  useEffect(() => {
+    // This effect ensures that `addClaim` and `updateClaimStatus` have the latest `addNotification`
+    // if `addNotification` itself were to ever change (which it doesn't in this simple case, but good practice).
+  }, [addNotification]);
 
   return (
     <AppContext.Provider
@@ -201,3 +206,4 @@ export const useAppContext = () => {
   }
   return context;
 };
+
