@@ -15,13 +15,13 @@ const AssessFraudRiskInputSchema = z.object({
   claimDetails: z
     .string()
     .describe('The details of the insurance claim, including all relevant information.'),
-  supportingDocumentUri: 
+  supportingDocumentUri:
     z.string()
     .describe(
       'The main supporting document for the claim, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     )
     .optional(),
-  imageEvidenceUris: 
+  imageEvidenceUris:
     z.array(z.string())
     .optional()
     .describe(

@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const QaOnDocumentInputSchema = z.object({
+const QaOnDocumentInputSchema = z.object({
   documentDataUri: z
     .string()
     .describe(
@@ -21,7 +21,7 @@ export const QaOnDocumentInputSchema = z.object({
 });
 export type QaOnDocumentInput = z.infer<typeof QaOnDocumentInputSchema>;
 
-export const QaOnDocumentOutputSchema = z.object({
+const QaOnDocumentOutputSchema = z.object({
   answer: z.string().describe('The AI_s answer to the question, based on the document.'),
 });
 export type QaOnDocumentOutput = z.infer<typeof QaOnDocumentOutputSchema>;
