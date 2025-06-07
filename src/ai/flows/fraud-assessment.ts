@@ -15,11 +15,18 @@ const AssessFraudRiskInputSchema = z.object({
   claimDetails: z
     .string()
     .describe('The details of the insurance claim, including all relevant information.'),
-  supportingDocuments: z
+  supportingDocumentUri: z // Renamed from supportingDocuments for clarity
     .string()
     .describe(
-      'Supporting documents for the claim, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'      
-    ).optional(),
+      'The main supporting document for the claim, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
+    )
+    .optional(),
+  imageEvidenceUris: z // New field for multiple images
+    .array(z.string())
+    .optional()
+    .describe(
+      'An array of image data URIs providing visual evidence for the claim. Each URI must include a MIME type and use Base64 encoding.'
+    ),
   claimHistory: z.string().describe('The claim history of the claimant.').optional(),
 });
 export type AssessFraudRiskInput = z.infer<typeof AssessFraudRiskInputSchema>;
@@ -43,13 +50,21 @@ const prompt = ai.definePrompt({
   output: {schema: AssessFraudRiskOutputSchema},
   prompt: `You are an expert fraud analyst specializing in insurance claims.
 
-  Analyze the provided claim details, supporting documents, and claim history to assess the risk of fraud.
+  Analyze the provided claim details, supporting document, image evidence, and claim history to assess the risk of fraud.
   Provide a risk score between 0 and 1, where 1 indicates the highest risk.
   Highlight any specific fraud indicators or suspicious patterns.
   Provide a summary of your assessment.
 
   Claim Details: {{{claimDetails}}}
-  Supporting Documents: {{#if supportingDocuments}}{{media url=supportingDocuments}}{{else}}None{{/if}}
+  Supporting Document: {{#if supportingDocumentUri}}{{media url=supportingDocumentUri}}{{else}}None{{/if}}
+  Image Evidence:
+  {{#if imageEvidenceUris}}
+    {{#each imageEvidenceUris}}
+      Image: {{media url=this}}
+    {{/each}}
+  {{else}}
+    None
+  {{/if}}
   Claim History: {{#if claimHistory}}{{{claimHistory}}}{{else}}None{{/if}}`,
 });
 

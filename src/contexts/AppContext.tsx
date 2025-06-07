@@ -7,10 +7,22 @@ import type { Claim, AppNotification, ClaimStatus } from '@/lib/types';
 import { assessFraudRisk } from '@/ai/flows/fraud-assessment';
 import { extractDocumentInformation } from '@/ai/flows/document-processing';
 
+// Define the structure of data coming from ClaimForm
+interface NewClaimFormData {
+  claimantName: string;
+  policyNumber: string;
+  incidentDate: string;
+  incidentDescription: string;
+  documentUri?: string;
+  documentName?: string;
+  imageUris?: string[];
+  imageNames?: string[];
+}
+
 interface AppContextType {
   claims: Claim[];
   notifications: AppNotification[];
-  addClaim: (newClaimData: Omit<Claim, 'id' | 'status' | 'submissionDate' | 'lastUpdatedDate' | 'fraudAssessment' | 'extractedInfo'>) => Promise<Claim | null>;
+  addClaim: (newClaimData: NewClaimFormData) => Promise<Claim | null>;
   updateClaimStatus: (claimId: string, status: ClaimStatus, notes?: string) => void;
   getClaimById: (claimId: string) => Claim | undefined;
   addNotification: (notification: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
@@ -29,7 +41,10 @@ const initialClaims: Claim[] = [
     policyNumber: 'POL-12345',
     incidentDate: '2023-10-15',
     incidentDescription: 'Minor fender bender in parking lot. Scratches on rear bumper.',
-    documentName: 'accident_photos.zip',
+    documentName: 'accident_photos.zip', // This was likely a placeholder, as it's a zip not a single doc.
+    // documentUri: 'data:application/zip;base64,UEsDBBQAAAAA...', // Example if it were a real data URI
+    imageNames: ['bumper_scratch.jpg', 'overall_damage.jpg'],
+    imageUris: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'], // Placeholder URIs
     status: 'Approved',
     submissionDate: new Date('2023-10-16T10:00:00Z').toISOString(),
     lastUpdatedDate: new Date('2023-10-18T14:30:00Z').toISOString(),
@@ -44,6 +59,7 @@ const initialClaims: Claim[] = [
     incidentDate: '2023-11-01',
     incidentDescription: 'Water damage due to burst pipe in kitchen. Affects flooring and cabinets.',
     documentName: 'plumber_report.pdf',
+    // documentUri: 'data:application/pdf;base64,JVBERi0xLjQKJ...', // Example
     status: 'Pending',
     submissionDate: new Date('2023-11-02T09:15:00Z').toISOString(),
     lastUpdatedDate: new Date('2023-11-02T09:15:00Z').toISOString(),
@@ -55,6 +71,9 @@ const initialClaims: Claim[] = [
     incidentDate: '2023-11-05',
     incidentDescription: 'Stolen laptop from car. Police report filed.',
     documentName: 'police_report_CHB110523.pdf',
+    // documentUri: 'data:application/pdf;base64,JVBERi0xLjQKJ...', // Example
+    imageNames: ['car_window.jpg'],
+    imageUris: ['https://placehold.co/600x400.png'], // Placeholder URI
     status: 'Under Review',
     submissionDate: new Date('2023-11-06T11:00:00Z').toISOString(),
     lastUpdatedDate: new Date('2023-11-07T16:00:00Z').toISOString(),
@@ -69,7 +88,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const notificationIdCounter = useRef(0);
-  const claimIdCounter = useRef(0);
+  const claimIdCounter = useRef(initialClaims.length); // Start counter after initial claims
 
 
   const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
@@ -80,20 +99,21 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       timestamp: new Date().toISOString(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); // Keep last 20 notifications
+    setNotifications(prev => [newNotification, ...prev].slice(0, 20));
   }, []);
 
-  const addClaim = useCallback(async (newClaimData: Omit<Claim, 'id' | 'status' | 'submissionDate' | 'lastUpdatedDate' | 'fraudAssessment' | 'extractedInfo'>): Promise<Claim | null> => {
+  const addClaim = useCallback(async (newClaimData: NewClaimFormData): Promise<Claim | null> => {
     setIsLoading(true);
     try {
       claimIdCounter.current += 1;
-      const id = `clm_${Date.now().toString()}_${claimIdCounter.current}`;
+      const id = `clm_${Date.now().toString()}_${claimIdCounter.current}_${Math.random().toString(36).substring(2, 7)}`;
       const submissionDate = new Date().toISOString();
       
       let extractedInfo: Record<string, string> | undefined;
       if (newClaimData.documentUri && newClaimData.documentName) {
         const docType = newClaimData.documentName.endsWith('.pdf') ? 'PDF Document' : 
-                        newClaimData.documentName.match(/\.(jpeg|jpg|png|gif)$/i) ? 'Image' : 'General Document';
+                        newClaimData.documentName.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' : 
+                        newClaimData.documentName.endsWith('.zip') ? 'ZIP Archive' : 'General Document';
         try {
           const extractionResult = await extractDocumentInformation({
             documentDataUri: newClaimData.documentUri,
@@ -121,7 +141,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         const assessmentInput = {
           claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(extractedInfo || {})}`,
-          supportingDocuments: newClaimData.documentUri,
+          supportingDocumentUri: newClaimData.documentUri,
+          imageEvidenceUris: newClaimData.imageUris, // Pass the array of image URIs
         };
         fraudAssessmentResult = await assessFraudRisk(assessmentInput);
         addNotification({ title: 'Fraud Assessment Complete', message: `Risk score: ${fraudAssessmentResult.riskScore.toFixed(2)} for claim by ${newClaimData.claimantName}.`, type: 'info', claimId: id });
@@ -131,8 +152,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
 
       const fullClaim: Claim = {
-        ...newClaimData,
         id,
+        claimantName: newClaimData.claimantName,
+        policyNumber: newClaimData.policyNumber,
+        incidentDate: newClaimData.incidentDate,
+        incidentDescription: newClaimData.incidentDescription,
+        documentName: newClaimData.documentName,
+        documentUri: newClaimData.documentUri,
+        imageNames: newClaimData.imageNames,
+        imageUris: newClaimData.imageUris,
         status: 'Pending',
         submissionDate,
         lastUpdatedDate: submissionDate,
@@ -180,7 +208,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
 
   useEffect(() => {
-  }, [addNotification]);
+    // Could be used for initial data loading from a backend in a real app
+  }, []);
 
   return (
     <AppContext.Provider
@@ -208,4 +237,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-

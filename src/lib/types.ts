@@ -10,6 +10,8 @@ export interface Claim {
   incidentDescription: string;
   documentName?: string;
   documentUri?: string; // Store as data URI
+  imageNames?: string[];
+  imageUris?: string[]; // Store as data URIs for multiple images
   status: ClaimStatus;
   extractedInfo?: Record<string, string>;
   fraudAssessment?: AssessFraudRiskOutput;

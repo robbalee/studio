@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, CheckCircle2, Clock, FileText, Loader2, MessageSquare, ShieldAlert, UserCircle, Info } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, FileText, Loader2, MessageSquare, ShieldAlert, UserCircle, Info, Image as ImageIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
+import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide icon
 
 const claimStatuses: ClaimStatus[] = ['Pending', 'Under Review', 'Approved', 'Rejected', 'Information Requested'];
 
@@ -107,7 +108,7 @@ export function ClaimDetailsClientPage() {
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-3xl font-headline">Claim Details: {claim.id}</CardTitle>
+              <CardTitle className="text-3xl font-headline">Claim Details: {claim.id.substring(0,12)}...</CardTitle>
               <CardDescription>Submitted on: {format(parseISO(claim.submissionDate), 'MMMM d, yyyy, h:mm a')}</CardDescription>
             </div>
             <Badge variant={
@@ -119,26 +120,26 @@ export function ClaimDetailsClientPage() {
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-4">
+        <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-4 lg:col-span-1">
             <InfoItem icon={UserCircle} label="Claimant Name" value={claim.claimantName} />
             <InfoItem icon={FileText} label="Policy Number" value={claim.policyNumber} />
             <InfoItem icon={Clock} label="Incident Date" value={format(parseISO(claim.incidentDate), 'MMMM d, yyyy')} />
             <InfoItem icon={MessageSquare} label="Incident Description" value={claim.incidentDescription} isLongText />
             {claim.documentName && (
               <InfoItem icon={FileText} label="Supporting Document">
-                {claim.documentUri ? (
+                {claim.documentUri && !claim.documentUri.startsWith('https://placehold.co') ? (
                   <a href={claim.documentUri} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     {claim.documentName}
                   </a>
                 ) : (
-                  <span>{claim.documentName} (Preview not available)</span>
+                  <span>{claim.documentName} (Preview not available for placeholders or direct link)</span>
                 )}
               </InfoItem>
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-1">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center"><ShieldAlert className="mr-2 h-5 w-5 text-primary" /> Fraud Assessment</CardTitle>
@@ -186,6 +187,39 @@ export function ClaimDetailsClientPage() {
               </CardContent>
             </Card>
           </div>
+          
+          <div className="space-y-4 lg:col-span-1">
+             <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center"><ImageIcon className="mr-2 h-5 w-5 text-primary" /> Uploaded Images</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {claim.imageUris && claim.imageUris.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {claim.imageUris.map((uri, index) => (
+                      <div key={index} className="relative aspect-square rounded-md overflow-hidden border">
+                        <NextImage
+                          src={uri}
+                          alt={claim.imageNames?.[index] || `Uploaded Image ${index + 1}`}
+                          layout="fill"
+                          objectFit="cover"
+                          onError={(e) => (e.currentTarget.src = 'https://placehold.co/100x100.png?text=Error')}
+                        />
+                         {claim.imageNames?.[index] && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate" title={claim.imageNames?.[index]}>
+                                {claim.imageNames?.[index]}
+                            </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic">No images uploaded for this claim.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
         </CardContent>
       </Card>
 

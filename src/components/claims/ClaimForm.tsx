@@ -21,7 +21,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type React from 'react';
 import { useState } from "react";
-import { Loader2, UploadCloud } from "lucide-react";
+import { Loader2, UploadCloud, Image as ImageIcon, FileText } from "lucide-react";
+
+const MAX_FILE_SIZE_DOC = 5 * 1024 * 1024; // 5MB for single document
+const MAX_FILE_SIZE_IMG = 2 * 1024 * 1024; // 2MB for each image
+const MAX_IMAGES = 5;
 
 const claimFormSchema = z.object({
   claimantName: z.string().min(2, { message: "Claimant name must be at least 2 characters." }),
@@ -30,7 +34,11 @@ const claimFormSchema = z.object({
   incidentDescription: z.string().min(10, { message: "Description must be at least 10 characters." }),
   document: z.custom<FileList>().optional()
     .refine(files => !files || files.length <= 1, "Only one document can be uploaded.")
-    .refine(files => !files || !files[0] || files[0].size <= 5 * 1024 * 1024, `Max file size is 5MB.`), // Max 5MB
+    .refine(files => !files || !files[0] || files[0].size <= MAX_FILE_SIZE_DOC, `Max document file size is ${MAX_FILE_SIZE_DOC / (1024*1024)}MB.`),
+  images: z.custom<FileList>().optional()
+    .refine(files => !files || files.length <= MAX_IMAGES, `You can upload a maximum of ${MAX_IMAGES} images.`)
+    .refine(files => !files || Array.from(files).every(file => file.size <= MAX_FILE_SIZE_IMG), `Each image must be ${MAX_FILE_SIZE_IMG / (1024*1024)}MB or less.`)
+    .refine(files => !files || Array.from(files).every(file => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)), "Only JPG, PNG, GIF, WEBP images are allowed.")
 });
 
 type ClaimFormValues = z.infer<typeof claimFormSchema>;
@@ -40,7 +48,8 @@ export function ClaimForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [docFileName, setDocFileName] = useState<string | null>(null);
+  const [imageFileNames, setImageFileNames] = useState<string[]>([]);
 
   const form = useForm<ClaimFormValues>({
     resolver: zodResolver(claimFormSchema),
@@ -52,31 +61,67 @@ export function ClaimForm() {
     },
   });
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      setFileName(files[0].name);
-      form.setValue("document", files); // react-hook-form handles FileList
+      setDocFileName(files[0].name);
+      form.setValue("document", files); 
     } else {
-      setFileName(null);
+      setDocFileName(null);
       form.setValue("document", undefined);
     }
+  };
+
+  const handleImageFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      setImageFileNames(Array.from(files).map(file => file.name));
+      form.setValue("images", files);
+    } else {
+      setImageFileNames([]);
+      form.setValue("images", undefined);
+    }
+  };
+
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
   };
 
   async function onSubmit(data: ClaimFormValues) {
     setIsSubmitting(true);
     let documentUri: string | undefined;
     let documentName: string | undefined;
+    let imageUris: string[] = [];
+    let imageNames: string[] = [];
 
     if (data.document && data.document.length > 0) {
       const file = data.document[0];
       documentName = file.name;
-      documentUri = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-      });
+      try {
+        documentUri = await readFileAsDataURL(file);
+      } catch (error) {
+        console.error("Error reading document file:", error);
+        toast({ title: "Error Reading Document", description: "Could not process the uploaded document.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    if (data.images && data.images.length > 0) {
+      imageNames = Array.from(data.images).map(file => file.name);
+      try {
+        imageUris = await Promise.all(Array.from(data.images).map(file => readFileAsDataURL(file)));
+      } catch (error) {
+        console.error("Error reading image files:", error);
+        toast({ title: "Error Reading Images", description: "Could not process one or more uploaded images.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     const claimData = {
@@ -86,6 +131,8 @@ export function ClaimForm() {
       incidentDescription: data.incidentDescription,
       documentUri,
       documentName,
+      imageUris,
+      imageNames,
     };
 
     const newClaim = await addClaim(claimData);
@@ -114,7 +161,7 @@ export function ClaimForm() {
     <Card className="max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline">Submit New Insurance Claim</CardTitle>
-        <CardDescription>Please fill in the details below to submit your claim. Attach any supporting documents if necessary.</CardDescription>
+        <CardDescription>Please fill in the details below. Attach a main supporting document and up to ${MAX_IMAGES} images if necessary.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -179,7 +226,7 @@ export function ClaimForm() {
             <FormField
               control={form.control}
               name="document"
-              render={() => ( // field is not directly used here, but form state is
+              render={() => ( 
                 <FormItem>
                   <FormLabel>Supporting Document (Optional)</FormLabel>
                   <FormControl>
@@ -188,29 +235,76 @@ export function ClaimForm() {
                         id="document-upload"
                         type="file" 
                         className="hidden"
-                        onChange={handleFileChange} 
+                        onChange={handleDocFileChange} 
                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
                       />
                       <label 
                         htmlFor="document-upload"
                         className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       >
-                        <span className="flex items-center space-x-2">
-                          <UploadCloud className="w-6 h-6 text-muted-foreground" />
+                        <span className="flex flex-col items-center space-y-1 text-center">
+                          <UploadCloud className="w-8 h-8 text-muted-foreground" />
                           <span className="font-medium text-muted-foreground">
-                            {fileName || "Click to upload or drag and drop"}
+                            {docFileName || "Click to upload main document"}
                           </span>
+                           {docFileName && <span className="text-xs text-muted-foreground">{docFileName}</span>}
                         </span>
                       </label>
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Max file size: 5MB. Accepted formats: PDF, DOC, DOCX, JPG, PNG, ZIP.
+                    Max file size: ${MAX_FILE_SIZE_DOC / (1024*1024)}MB. Accepted: PDF, DOC, DOCX, JPG, PNG, ZIP.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="images"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Supporting Images (Optional, up to {MAX_IMAGES})</FormLabel>
+                  <FormControl>
+                     <div className="relative">
+                       <Input 
+                        id="images-upload"
+                        type="file" 
+                        multiple
+                        className="hidden"
+                        onChange={handleImageFilesChange} 
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                      />
+                      <label 
+                        htmlFor="images-upload"
+                        className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <span className="flex flex-col items-center space-y-1 text-center">
+                          <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                          <span className="font-medium text-muted-foreground">
+                            {imageFileNames.length > 0 ? `${imageFileNames.length} image(s) selected` : "Click to upload images"}
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                    {imageFileNames.length > 0 && (
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <p className="font-medium text-foreground">Selected images:</p>
+                        <ul className="list-disc list-inside pl-4">
+                          {imageFileNames.map(name => <li key={name} className="truncate">{name}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </FormControl>
+                  <FormDescription>
+                    Max {MAX_IMAGES} images. Each up to ${MAX_FILE_SIZE_IMG / (1024*1024)}MB. Accepted: JPG, PNG, GIF, WEBP.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <Button type="submit" className="w-full" disabled={totalLoading}>
               {totalLoading ? (
                 <>
