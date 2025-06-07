@@ -3,7 +3,7 @@
 
 import type React from 'react';
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import type { Claim, AppNotification, ClaimStatus } from '@/lib/types';
+import type { Claim, AppNotification, ClaimStatus, ConsistencyReport } from '@/lib/types';
 import { assessFraudRisk } from '@/ai/flows/fraud-assessment';
 import { extractDocumentInformation } from '@/ai/flows/document-processing';
 
@@ -24,8 +24,16 @@ const initialClaims: Claim[] = [
     status: 'Pending',
     submissionDate: '2024-07-20T10:00:00Z',
     lastUpdatedDate: '2024-07-20T10:00:00Z',
-    extractedInfo: { fromDoc: "some info", policyHolder: "Alice" },
+    extractedInfo: { fromDoc: "some info", policyHolder: "Alice", incidentLocation: "Mall Parking Lot" },
     fraudAssessment: { riskScore: 0.1, fraudIndicators: ["Low impact collision"], summary: "Low risk, standard claim." },
+    consistencyReport: {
+      status: 'Consistent',
+      summary: 'Key details (Claimant Name, Incident Date) appear consistent between AccidentReport.pdf and Police Report (on file).',
+      details: [
+        { documentA: 'AccidentReport.pdf', documentB: 'Police Report (on file)', field: 'Claimant Name', valueA: 'Alice Wonderland', valueB: 'Alice Wonderland', finding: 'Match' },
+        { documentA: 'AccidentReport.pdf', documentB: 'Police Report (on file)', field: 'Incident Date', valueA: '2024-07-15', valueB: '2024-07-15', finding: 'Match'},
+      ]
+    },
     notes: 'Awaiting adjuster review.',
   },
   {
@@ -39,8 +47,16 @@ const initialClaims: Claim[] = [
     status: 'Approved',
     submissionDate: '2024-07-21T14:30:00Z',
     lastUpdatedDate: '2024-07-22T09:15:00Z',
-    extractedInfo: { invoiceTotal: "$500", serviceDate: "2024-07-19" },
+    extractedInfo: { invoiceTotal: "$500", serviceDate: "2024-07-19", plumberName: "FixIt Plumbing" },
     fraudAssessment: { riskScore: 0.05, fraudIndicators: [], summary: "Straightforward water damage claim. Approved." },
+    consistencyReport: {
+      status: 'Inconsistent',
+      summary: 'Discrepancy noted in "Service Date" between PlumberInvoice.pdf and Homeowner Statement (on file). Further review suggested for date alignment.',
+      details: [
+        { documentA: 'PlumberInvoice.pdf', documentB: 'Homeowner Statement (on file)', field: 'Service Date', valueA: '2024-07-19', valueB: '2024-07-18', finding: 'Mismatch' },
+        { documentA: 'PlumberInvoice.pdf', documentB: 'Homeowner Statement (on file)', field: 'Reported Damage', valueA: 'Burst pipe', valueB: 'Water leak', finding: 'Not Compared' }
+      ]
+    },
     notes: 'Payment processed.',
   },
 ];
@@ -153,6 +169,55 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNotification({ title: 'Fraud Assessment Failed', message: `Could not assess fraud risk for ${newClaimData.claimantName}.`, type: 'error', claimId: newClaimId });
       }
 
+      // Simulate Consistency Report Generation
+      let consistencyReport: ConsistencyReport | undefined;
+      if (newClaimData.documentUri && extractedInfo && fraudAssessmentResult) {
+        const isConsistent = Math.random() > 0.4; // 60% chance of being consistent for demo
+        const primaryDocName = newClaimData.documentName || "Submitted Claim Document";
+        const secondaryDocTypes = ["Police Report (on file)", "Witness Statement (on file)", "Internal System Record"];
+        const secondaryDocName = secondaryDocTypes[Math.floor(Math.random() * secondaryDocTypes.length)];
+        const commonFields = ["Incident Date", "Claimant Name", "Policy Number", "Vehicle Make/Model"];
+        const fieldForComparison = commonFields[Math.floor(Math.random() * commonFields.length)];
+
+        if (isConsistent) {
+          consistencyReport = {
+            status: 'Consistent',
+            summary: `Key details (e.g., Claimant Name, ${fieldForComparison}) appear consistent between ${primaryDocName} and ${secondaryDocName}.`,
+            details: [
+              { documentA: primaryDocName, documentB: secondaryDocName, field: fieldForComparison, valueA: String(extractedInfo?.[fieldForComparison.toLowerCase().replace(/\s/g, '')] || newClaimData[fieldForComparison.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "N/A"), valueB: String(extractedInfo?.[fieldForComparison.toLowerCase().replace(/\s/g, '')] || newClaimData[fieldForComparison.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "N/A"), finding: 'Match' }
+            ]
+          };
+        } else {
+          const valueA = String(extractedInfo?.[fieldForComparison.toLowerCase().replace(/\s/g, '')] || newClaimData[fieldForComparison.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "Value A");
+          let valueB = "Different Value B";
+          if (fieldForComparison === "Incident Date") {
+            valueB = new Date(Date.parse(newClaimData.incidentDate) - (Math.floor(Math.random() * 5) + 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          } else if (fieldForComparison === "Claimant Name") {
+            valueB = newClaimData.claimantName.split(" ")[0] + " Smith"; // Slightly different name
+          }
+
+          consistencyReport = {
+            status: 'Inconsistent',
+            summary: `Discrepancy noted in "${fieldForComparison}" between ${primaryDocName} and ${secondaryDocName}. Review recommended.`,
+            details: [{
+              documentA: primaryDocName,
+              documentB: secondaryDocName,
+              field: fieldForComparison,
+              valueA: valueA,
+              valueB: valueB,
+              finding: 'Mismatch',
+            }],
+          };
+        }
+        addNotification({ title: 'Consistency Check Simulated', message: `Consistency: ${consistencyReport.status} for ${newClaimData.claimantName}'s claim.`, type: 'info', claimId: newClaimId });
+      } else if (newClaimData.documentUri) {
+          consistencyReport = {
+              status: 'Not Run',
+              summary: 'Consistency check requires full AI analysis of all related documents. Main document uploaded.',
+          };
+      }
+
+
       const newClaim: Claim = {
         id: newClaimId,
         claimantName: newClaimData.claimantName,
@@ -170,6 +235,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         lastUpdatedDate: new Date().toISOString(),
         extractedInfo: extractedInfo || {},
         fraudAssessment: fraudAssessmentResult,
+        consistencyReport: consistencyReport,
         notes: '',
       };
 
@@ -228,7 +294,34 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
 
   useEffect(() => {
-    setClaims(initialClaims);
+    // On initial load, ensure existing claims also have some consistency report data for the demo
+    const claimsWithInitialConsistency = initialClaims.map(claim => {
+        if (!claim.consistencyReport) {
+            const isConsistent = Math.random() > 0.3;
+            const primaryDocName = claim.documentName || "Main Claim Document";
+            const secondaryDocName = "Archived Policy Record";
+            if (isConsistent) {
+                return {
+                    ...claim,
+                    consistencyReport: {
+                        status: 'Consistent' as const,
+                        summary: `Historical data for ${claim.claimantName} appears consistent.`,
+                    }
+                };
+            } else {
+                 return {
+                    ...claim,
+                    consistencyReport: {
+                        status: 'Inconsistent' as const,
+                        summary: `Minor discrepancy found in address history for ${claim.claimantName} when compared to ${secondaryDocName}.`,
+                        details: [{ documentA: primaryDocName, documentB: secondaryDocName, field: 'Address', valueA: '123 Main St', valueB: '124 Main St', finding: 'Mismatch' as const }]
+                    }
+                 }
+            }
+        }
+        return claim;
+    });
+    setClaims(claimsWithInitialConsistency);
     setNotifications(initialNotifications);
     notificationIdCounter.current = initialNotifications.length;
     setIsKycVerifiedForSession(false); // Ensure KYC is reset on full context re-init

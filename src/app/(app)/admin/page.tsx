@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Image from 'next/image';
-import { AlertTriangle, FileText, Brain, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, FileText, Brain, CheckCircle2, ClipboardCheck, Files, SearchCheck } from 'lucide-react';
+import type { ConsistencyReport } from '@/lib/types';
 
 export default function AdminReportsPage() {
   const { claims } = useAppContext();
@@ -46,12 +47,40 @@ export default function AdminReportsPage() {
     return { variant: 'default' as const, text: `Low Risk (${riskScore.toFixed(2)})`, icon: <CheckCircle2 className="h-4 w-4 mr-1" />, className: 'bg-accent text-accent-foreground' };
   };
 
+  const getConsistencyStatusIcon = (status?: ConsistencyReport['status']) => {
+    switch (status) {
+      case 'Consistent':
+        return <CheckCircle2 className="h-5 w-5 text-accent" />;
+      case 'Inconsistent':
+        return <AlertTriangle className="h-5 w-5 text-destructive" />;
+      case 'Partial':
+        return <SearchCheck className="h-5 w-5 text-yellow-500" />;
+      case 'Not Run':
+      default:
+        return <Files className="h-5 w-5 text-muted-foreground" />;
+    }
+  };
+  
+  const getConsistencyStatusBadgeVariant = (status?: ConsistencyReport['status']) => {
+    switch (status) {
+      case 'Consistent':
+        return 'default';
+      case 'Inconsistent':
+        return 'destructive';
+      case 'Partial':
+        return 'secondary';
+      case 'Not Run':
+      default:
+        return 'outline';
+    }
+  };
+
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline flex items-center"><Brain className="mr-2 h-7 w-7 text-primary" /> AI Reports Dashboard</CardTitle>
-        <CardDescription>Review AI-generated reports for submitted claims, including fraud assessments and document extractions.</CardDescription>
+        <CardDescription>Review AI-generated reports for submitted claims, including fraud assessments, document extractions, and consistency checks.</CardDescription>
       </CardHeader>
       <CardContent>
         {claims.length > 0 ? (
@@ -82,10 +111,10 @@ export default function AdminReportsPage() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="p-4 pt-0">
-                    <div className="border-t pt-4 grid md:grid-cols-2 gap-6">
+                    <div className="border-t pt-4 grid md:grid-cols-3 gap-6"> {/* Changed to 3 columns */}
                       <Card className="bg-background/50">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-lg flex items-center"><AlertTriangle className="mr-2 h-5 w-5 text-primary" /> Fraud Assessment Details</CardTitle>
+                          <CardTitle className="text-lg flex items-center"><AlertTriangle className="mr-2 h-5 w-5 text-primary" /> Fraud Assessment</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
                           {claim.fraudAssessment ? (
@@ -103,16 +132,50 @@ export default function AdminReportsPage() {
                               )}
                             </>
                           ) : (
-                            <p className="italic text-muted-foreground">No fraud assessment data available for this claim.</p>
+                            <p className="italic text-muted-foreground">No fraud assessment data available.</p>
                           )}
                         </CardContent>
                       </Card>
                       <Card className="bg-background/50">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-lg flex items-center"><FileText className="mr-2 h-5 w-5 text-primary" /> Extracted Document Information</CardTitle>
+                          <CardTitle className="text-lg flex items-center"><FileText className="mr-2 h-5 w-5 text-primary" /> Extracted Info</CardTitle>
                         </CardHeader>
                         <CardContent>
                           {renderExtractedInfo(claim.extractedInfo)}
+                        </CardContent>
+                      </Card>
+                       <Card className="bg-background/50">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center">
+                            {getConsistencyStatusIcon(claim.consistencyReport?.status)}
+                            <span className="ml-2">Consistency Check</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          {claim.consistencyReport ? (
+                            <>
+                              <Badge variant={getConsistencyStatusBadgeVariant(claim.consistencyReport.status)} 
+                                     className={claim.consistencyReport.status === 'Consistent' ? 'bg-accent text-accent-foreground' : claim.consistencyReport.status === 'Partial' ? 'bg-yellow-500 text-white' : ''}>
+                                {claim.consistencyReport.status}
+                              </Badge>
+                              <p><span className="font-medium">Summary:</span></p>
+                              <p className="text-muted-foreground bg-muted/30 p-2 rounded-md">{claim.consistencyReport.summary || "N/A"}</p>
+                              {claim.consistencyReport.details && claim.consistencyReport.details.length > 0 && (
+                                <div>
+                                  <p className="font-medium">Discrepancy Details:</p>
+                                  <ul className="list-disc list-inside text-muted-foreground pl-4 space-y-1">
+                                    {claim.consistencyReport.details.map((detail, i) => (
+                                      <li key={i}>
+                                        <strong>{detail.field}:</strong> Between "{detail.documentA}" (value: <em>{detail.valueA}</em>) and "{detail.documentB}" (value: <em>{detail.valueB}</em>) - <span className={detail.finding === 'Mismatch' ? 'text-destructive font-semibold' : ''}>{detail.finding}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <p className="italic text-muted-foreground">No consistency report available.</p>
+                          )}
                         </CardContent>
                       </Card>
                     </div>
