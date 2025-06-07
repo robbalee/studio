@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, TrendingUp, FileText, Brain } from 'lucide-react';
+import { ShieldCheck, FileText, Brain, Smartphone } from 'lucide-react';
 import Image from 'next/image';
 
 export default function WelcomePage() {
@@ -27,10 +27,10 @@ export default function WelcomePage() {
 
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex flex-col items-center text-center">
         <h2 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-6">
-          Intelligent Claims Processing, Simplified.
+          ClaimIntel: Effortless Claims for Policyholders, Powerful Insights for Insurers.
         </h2>
-        <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10">
-          ClaimIntel leverages cutting-edge AI to streamline your insurance claims, reduce fraud, and improve efficiency.
+        <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mb-10">
+          Experience a simpler, faster way to file and manage your insurance claims. For insurers, ClaimIntel offers cutting-edge AI to streamline operations, detect fraud, and enhance decision-making. We're transforming the claims journey for everyone.
         </p>
         <div className="grid md:grid-cols-2 gap-8 items-center max-w-4xl w-full mb-12">
           <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl">
@@ -44,19 +44,19 @@ export default function WelcomePage() {
           </div>
           <div className="flex flex-col gap-6 text-left">
             <FeatureItem
-              icon={<ShieldCheck className="text-primary h-7 w-7" />}
-              title="Advanced Fraud Detection"
-              description="Our AI analyzes claims for suspicious patterns, providing risk scores to help you identify and prevent fraud effectively."
+              icon={<Smartphone className="text-primary h-7 w-7" />}
+              title="Simple & Fast Claims for Policyholders"
+              description="File claims effortlessly, upload documents and media, and track progress with our user-friendly platform. Get quicker resolutions and stay informed every step of the way."
             />
             <FeatureItem
               icon={<FileText className="text-primary h-7 w-7" />}
-              title="Automated Document Processing"
-              description="Extract key information from documents automatically, saving time and reducing manual data entry errors."
+              title="Streamlined Operations for Insurers"
+              description="Automate document processing, extract key information instantly, and reduce manual workloads with our AI-powered tools, leading to faster cycle times."
             />
             <FeatureItem
-              icon={<TrendingUp className="text-primary h-7 w-7" />}
-              title="Enhanced Decision Support"
-              description="Get AI-powered insights and recommendations to make faster, more accurate claim decisions."
+              icon={<ShieldCheck className="text-primary h-7 w-7" />}
+              title="Intelligent Fraud Detection & Decision Support"
+              description="Leverage advanced AI to identify potential fraud, assess risk accurately, and provide your team with actionable insights for confident decision-making."
             />
           </div>
         </div>
