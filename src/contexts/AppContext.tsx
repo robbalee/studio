@@ -2,7 +2,7 @@
 "use client";
 
 import type React from 'react';
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { Claim, AppNotification, ClaimStatus } from '@/lib/types';
 import { assessFraudRisk } from '@/ai/flows/fraud-assessment';
 import { extractDocumentInformation } from '@/ai/flows/document-processing';
@@ -68,16 +68,30 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [claims, setClaims] = useState<Claim[]>(initialClaims);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const notificationIdCounter = useRef(0);
+  const claimIdCounter = useRef(0);
+
+
+  const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+    notificationIdCounter.current += 1;
+    const newNotification: AppNotification = {
+      ...notificationData,
+      id: `notif_${Date.now().toString()}_${notificationIdCounter.current}`,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); // Keep last 20 notifications
+  }, []);
 
   const addClaim = useCallback(async (newClaimData: Omit<Claim, 'id' | 'status' | 'submissionDate' | 'lastUpdatedDate' | 'fraudAssessment' | 'extractedInfo'>): Promise<Claim | null> => {
     setIsLoading(true);
     try {
-      const id = `clm_${Date.now().toString()}_${Math.random().toString(36).substring(2, 9)}`;
+      claimIdCounter.current += 1;
+      const id = `clm_${Date.now().toString()}_${claimIdCounter.current}`;
       const submissionDate = new Date().toISOString();
       
       let extractedInfo: Record<string, string> | undefined;
       if (newClaimData.documentUri && newClaimData.documentName) {
-        // Simple document type inference from name for demo
         const docType = newClaimData.documentName.endsWith('.pdf') ? 'PDF Document' : 
                         newClaimData.documentName.match(/\.(jpeg|jpg|png|gif)$/i) ? 'Image' : 'General Document';
         try {
@@ -108,7 +122,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const assessmentInput = {
           claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(extractedInfo || {})}`,
           supportingDocuments: newClaimData.documentUri,
-          // claimHistory: "Previous claim for minor accident in 2022, paid out." // Example, would come from DB
         };
         fraudAssessmentResult = await assessFraudRisk(assessmentInput);
         addNotification({ title: 'Fraud Assessment Complete', message: `Risk score: ${fraudAssessmentResult.riskScore.toFixed(2)} for claim by ${newClaimData.claimantName}.`, type: 'info', claimId: id });
@@ -137,7 +150,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIsLoading(false);
       return null;
     }
-  }, [addNotification]); // Added addNotification to dependency array
+  }, [addNotification]); 
 
   const updateClaimStatus = useCallback((claimId: string, status: ClaimStatus, notes?: string) => {
     setClaims(prevClaims =>
@@ -146,21 +159,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       )
     );
     addNotification({ title: 'Claim Updated', message: `Claim #${claimId.substring(0,12)}... status changed to ${status}.`, type: 'info', claimId });
-  }, [addNotification]); // Added addNotification to dependency array
+  }, [addNotification]); 
 
   const getClaimById = useCallback((claimId: string) => {
     return claims.find(claim => claim.id === claimId);
   }, [claims]);
 
-  const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
-    const newNotification: AppNotification = {
-      ...notificationData,
-      id: `notif_${Date.now().toString()}_${Math.random().toString(36).substring(2, 9)}`,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); // Keep last 20 notifications
-  }, []);
 
   const markNotificationAsRead = useCallback((notificationId: string) => {
     setNotifications(prev =>
@@ -176,8 +180,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
 
   useEffect(() => {
-    // This effect ensures that `addClaim` and `updateClaimStatus` have the latest `addNotification`
-    // if `addNotification` itself were to ever change (which it doesn't in this simple case, but good practice).
   }, [addNotification]);
 
   return (
