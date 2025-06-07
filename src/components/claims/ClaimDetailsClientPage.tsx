@@ -10,25 +10,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, CheckCircle2, Clock, FileText, Loader2, MessageSquare, ShieldAlert, UserCircle, Info, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, FileText, Loader2, MessageSquare, ShieldAlert, UserCircle, Info, Image as ImageIcon, Video as VideoIcon, HelpCircle, Send } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
-import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide icon
+import NextImage from 'next/image'; 
 
 const claimStatuses: ClaimStatus[] = ['Pending', 'Under Review', 'Approved', 'Rejected', 'Information Requested'];
 
 export function ClaimDetailsClientPage() {
   const params = useParams();
   const router = useRouter();
-  const { getClaimById, updateClaimStatus, isLoading: isContextLoading } = useAppContext();
+  const { getClaimById, updateClaimStatus, isLoading: isContextLoading, askQuestionOnDocument, qaAnswer, isAskingQuestion, clearQaAnswer } = useAppContext();
   const { toast } = useToast();
 
-  const [claim, setClaim] = useState<Claim | null | undefined>(undefined); // undefined for loading, null if not found
+  const [claim, setClaim] = useState<Claim | null | undefined>(undefined); 
   const [selectedStatus, setSelectedStatus] = useState<ClaimStatus | ''>('');
   const [notes, setNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [questionText, setQuestionText] = useState('');
 
   const claimId = typeof params.id === 'string' ? params.id : undefined;
 
@@ -39,9 +41,13 @@ export function ClaimDetailsClientPage() {
       if (foundClaim) {
         setSelectedStatus(foundClaim.status);
         setNotes(foundClaim.notes || '');
+        clearQaAnswer(); // Clear previous Q&A answer when navigating to a new claim
       }
     }
-  }, [claimId, getClaimById]);
+     return () => { // Cleanup on unmount
+      clearQaAnswer();
+    };
+  }, [claimId, getClaimById, clearQaAnswer]);
 
   const handleStatusUpdate = () => {
     if (claim && selectedStatus) {
@@ -52,14 +58,25 @@ export function ClaimDetailsClientPage() {
         description: `Claim ${claim.id} status set to ${selectedStatus}.`,
         className: "bg-accent text-accent-foreground",
       });
-      // Refresh claim data from context
       const updatedClaim = getClaimById(claim.id);
       setClaim(updatedClaim);
       setIsUpdating(false);
     }
   };
 
-  if (claim === undefined || isContextLoading) {
+  const handleAskQuestion = async () => {
+    if (claim && claim.documentUri && questionText.trim()) {
+      await askQuestionOnDocument(claim.documentUri, questionText.trim(), claim.id);
+      setQuestionText(''); // Clear input after asking
+    } else if (!claim?.documentUri) {
+       toast({ title: "No Document", description: "This claim does not have a document to ask questions about.", variant: "destructive" });
+    } else {
+       toast({ title: "Empty Question", description: "Please type a question.", variant: "destructive" });
+    }
+  };
+
+
+  if (claim === undefined || isContextLoading && !isAskingQuestion) { // Don't show main loader if only Q&A is loading
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -96,7 +113,7 @@ export function ClaimDetailsClientPage() {
       riskBadgeText = "High";
       riskIcon = <ShieldAlert className="h-4 w-4 mr-1 text-destructive" />;
     } else if (riskScore >= 0.4) {
-      riskBadgeVariant = "secondary"; // Often yellow-ish
+      riskBadgeVariant = "secondary"; 
       riskBadgeText = "Medium";
       riskIcon = <AlertCircle className="h-4 w-4 mr-1 text-yellow-500" />;
     }
@@ -128,7 +145,7 @@ export function ClaimDetailsClientPage() {
             <InfoItem icon={MessageSquare} label="Incident Description" value={claim.incidentDescription} isLongText />
             {claim.documentName && (
               <InfoItem icon={FileText} label="Supporting Document">
-                {claim.documentUri && !claim.documentUri.startsWith('https://placehold.co') ? (
+                {claim.documentUri && !claim.documentUri.startsWith('https://placehold.co') && !claim.documentUri.startsWith('data:text/plain') ? (
                   <a href={claim.documentUri} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     {claim.documentName}
                   </a>
@@ -144,7 +161,7 @@ export function ClaimDetailsClientPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center"><ShieldAlert className="mr-2 h-5 w-5 text-primary" /> Fraud Assessment</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 text-sm">
                 {claim.fraudAssessment ? (
                   <>
                     <div className="flex items-center">
@@ -176,18 +193,18 @@ export function ClaimDetailsClientPage() {
               </CardHeader>
               <CardContent>
                 {claim.extractedInfo && Object.keys(claim.extractedInfo).length > 0 ? (
-                  <ul className="space-y-2 text-sm">
-                    {Object.entries(claim.extractedInfo).map(([key, value]) => (
-                      <li key={key} className="flex flex-col">
-                        <div>
-                          <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                   <ul className="space-y-1 text-sm max-h-60 overflow-y-auto">
+                    {Object.entries(claim.extractedInfo).map(([key, fieldDetail]) => (
+                      <li key={key}>
+                        <div className="flex items-center">
+                           <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
                         </div>
-                        {typeof value === 'object' && value !== null ? (
+                        {typeof fieldDetail.value === 'object' && fieldDetail.value !== null ? (
                           <pre className="ml-2 mt-1 p-2 bg-muted/50 rounded-md text-xs whitespace-pre-wrap break-all">
-                            {JSON.stringify(value, null, 2)}
+                            {JSON.stringify(fieldDetail.value, null, 2)}
                           </pre>
                         ) : (
-                          <span className="ml-2">{String(value)}</span>
+                          <span className="ml-1 text-muted-foreground">{String(fieldDetail.value)}</span>
                         )}
                       </li>
                     ))}
@@ -257,6 +274,45 @@ export function ClaimDetailsClientPage() {
         </CardContent>
       </Card>
 
+      {claim.documentUri && !claim.documentUri.startsWith('https://placehold.co') && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="font-headline flex items-center"><HelpCircle className="mr-2 h-6 w-6 text-primary" /> Q&amp;A on Document</CardTitle>
+            <CardDescription>Ask questions about the content of the uploaded supporting document ({claim.documentName || 'Document'}).</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="e.g., What is the policy number mentioned?"
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !isAskingQuestion && handleAskQuestion()}
+                disabled={isAskingQuestion}
+                className="flex-grow"
+              />
+              <Button onClick={handleAskQuestion} disabled={isAskingQuestion || !questionText.trim()}>
+                {isAskingQuestion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                Ask AI
+              </Button>
+            </div>
+            {isAskingQuestion && !qaAnswer && (
+              <div className="flex items-center text-muted-foreground p-4 border rounded-md bg-muted/30">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                AI is thinking...
+              </div>
+            )}
+            {qaAnswer && (
+              <div className="p-4 border rounded-md bg-card space-y-2">
+                <p className="font-semibold text-primary">AI's Answer:</p>
+                <p className="text-sm whitespace-pre-wrap">{qaAnswer}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline">Update Claim Status</CardTitle>
@@ -316,3 +372,4 @@ function InfoItem({ icon: Icon, label, value, children, isLongText = false }: In
     </div>
   );
 }
+

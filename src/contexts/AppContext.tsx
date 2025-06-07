@@ -6,6 +6,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef } f
 import type { Claim, AppNotification, ClaimStatus, ConsistencyReport, ExtractedFieldWithOptionalBox } from '@/lib/types';
 import { assessFraudRisk } from '@/ai/flows/fraud-assessment';
 import { extractDocumentInformation } from '@/ai/flows/document-processing';
+import { qaOnDocument } from '@/ai/flows/qa-on-document'; // Import the new flow
 
 // Initial Data (can be expanded or fetched from an API later)
 const initialClaims: Claim[] = [
@@ -16,7 +17,7 @@ const initialClaims: Claim[] = [
     incidentDate: '2024-07-15',
     incidentDescription: 'Minor fender bender in parking lot. Scratches on rear bumper.',
     documentName: 'AccidentReport.pdf',
-    documentUri: 'https://placehold.co/200x300.png?text=Doc1',
+    documentUri: 'data:application/pdf;base64,JVBERi0xLjQKJ...', // Placeholder for actual Data URI
     imageNames: ['damage_front.jpg', 'damage_side.jpg'],
     imageUris: ['https://placehold.co/150x100.png?text=Img1.1', 'https://placehold.co/150x100.png?text=Img1.2'],
     videoName: 'dashcam_footage.mp4',
@@ -48,7 +49,7 @@ const initialClaims: Claim[] = [
     incidentDate: '2024-07-18',
     incidentDescription: 'Water damage from burst pipe in kitchen.',
     documentName: 'PlumberInvoice.pdf',
-    documentUri: 'https://placehold.co/200x300.png?text=Doc2',
+    documentUri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', // Placeholder 1x1 transparent png
     status: 'Approved',
     submissionDate: '2024-07-21T14:30:00Z',
     lastUpdatedDate: '2024-07-22T09:15:00Z',
@@ -103,6 +104,10 @@ interface AppContextType {
   isKycVerifiedForSession: boolean;
   completeKycSession: () => void;
   resetKycSession: () => void;
+  askQuestionOnDocument: (documentDataUri: string, question: string, claimId?: string) => Promise<string | null>;
+  qaAnswer: string | null;
+  isAskingQuestion: boolean;
+  clearQaAnswer: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -110,9 +115,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [claims, setClaims] = useState<Claim[]>(initialClaims);
   const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // General loading for claim submission/update
   const [isKycVerifiedForSession, setIsKycVerifiedForSession] = useState(false);
   const notificationIdCounter = useRef(initialNotifications.length); 
+
+  const [qaAnswer, setQaAnswer] = useState<string | null>(null);
+  const [isAskingQuestion, setIsAskingQuestion] = useState(false);
+
 
   const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
     notificationIdCounter.current += 1;
@@ -308,45 +317,57 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsKycVerifiedForSession(true);
   }, []);
 
+  const askQuestionOnDocument = useCallback(async (documentDataUri: string, question: string, claimId?: string): Promise<string | null> => {
+    if (!documentDataUri || !question.trim()) {
+      setQaAnswer("Please provide a document and a question.");
+      return "Please provide a document and a question.";
+    }
+    setIsAskingQuestion(true);
+    setQaAnswer(null);
+    try {
+      const result = await qaOnDocument({ documentDataUri, question });
+      setQaAnswer(result.answer);
+      addNotification({ title: "AI Answer Received", message: "The AI has responded to your question.", type: "success", claimId });
+      return result.answer;
+    } catch (error) {
+      console.error("Error asking question on document:", error);
+      const errorMessage = "Sorry, I encountered an error trying to answer that question. The AI model might be unavailable or the document could not be processed.";
+      setQaAnswer(errorMessage);
+      addNotification({ title: "Q&A Error", message: "The AI could not answer your question.", type: "error", claimId });
+      return errorMessage;
+    } finally {
+      setIsAskingQuestion(false);
+    }
+  }, [addNotification]);
+
+  const clearQaAnswer = useCallback(() => {
+    setQaAnswer(null);
+  }, []);
+
 
   useEffect(() => {
-    setClaims(prevClaims => prevClaims.map(claim => {
-        const updatedExtractedInfo: Record<string, ExtractedFieldWithOptionalBox> = {};
-        if (claim.extractedInfo) {
-            for (const key in claim.extractedInfo) {
-                const currentVal = claim.extractedInfo[key];
-                if (typeof currentVal === 'object' && currentVal !== null && 'value' in currentVal) {
-                    // Already in new format
-                    updatedExtractedInfo[key] = currentVal as ExtractedFieldWithOptionalBox;
-                } else {
-                    // Old format, convert it
-                    updatedExtractedInfo[key] = { value: currentVal, boundingBox: null };
-                }
-            }
-        }
-
+    // Ensure initial claims have valid (even if placeholder) document URIs for Q&A testing
+    const updatedInitialClaims = initialClaims.map(claim => {
+      if (claim.documentUri && claim.documentUri.startsWith('https://placehold.co')) {
         return {
-            ...claim,
-            extractedInfo: Object.keys(updatedExtractedInfo).length > 0 ? updatedExtractedInfo : claim.extractedInfo, // Keep original if it was empty/undefined
-            ...(claim.id === 'clm_1749303123456_abc' && !claim.extractedInfo?.policyNumber?.boundingBox && // Ensure mock boxes for Alice
-              { extractedInfo: {
-                  policyNumber: { value: "POL-001", boundingBox: { x: 0.1, y: 0.05, width: 0.2, height: 0.03, page: 1 } },
-                  claimantName: { value: "Alice Wonderland", boundingBox: { x: 0.1, y: 0.10, width: 0.3, height: 0.03, page: 1 } },
-                  incidentLocation: { value: "Mall Parking Lot", boundingBox: null },
-                  vehicleDamage: { value: "Scratches on rear bumper", boundingBox: { x: 0.1, y: 0.25, width: 0.5, height: 0.08, page: 1 } }
-                }
-              }
-            ),
-             ...(claim.id === 'clm_1749303123789_def' && !claim.extractedInfo?.invoiceTotal?.boundingBox && // Ensure mock boxes for Bob
-              { extractedInfo: {
-                  invoiceTotal: { value: "$500", boundingBox: { x: 0.7, y: 0.8, width: 0.15, height: 0.04, page: 1 } },
-                  serviceDate: { value: "2024-07-19", boundingBox: { x: 0.1, y: 0.15, width: 0.2, height: 0.03, page: 1 } },
-                  plumberName: { value: "FixIt Plumbing", boundingBox: null }
-                }
-              }
-            )
+          ...claim,
+          // Replace placeholder.co with a tiny valid data URI if it's a placeholder
+          // This is important because the Q&A flow expects a data URI
+          documentUri: 'data:text/plain;base64,SGVsbG8sIHdvcmxkIQ==', // "Hello, world!"
+          documentName: claim.documentName || 'placeholder_document.txt'
         };
-    }));
+      }
+      if (!claim.documentUri) { // If no documentUri, provide a default for testing
+         return {
+          ...claim,
+          documentUri: 'data:text/plain;base64,Tm8gZG9jdW1lbnQgdXBsb2FkZWQu', // "No document uploaded."
+          documentName: 'no_document.txt'
+        };
+      }
+      return claim;
+    });
+    setClaims(updatedInitialClaims);
+    
     setNotifications(initialNotifications);
     notificationIdCounter.current = initialNotifications.length;
     setIsKycVerifiedForSession(false); 
@@ -368,6 +389,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         isKycVerifiedForSession,
         completeKycSession,
         resetKycSession,
+        askQuestionOnDocument,
+        qaAnswer,
+        isAskingQuestion,
+        clearQaAnswer,
       }}
     >
       {children}
@@ -382,3 +407,4 @@ export const useAppContext = () => {
   }
   return context;
 };
+
