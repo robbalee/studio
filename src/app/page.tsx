@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2, Quote, Star } from 'lucide-react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 
@@ -87,7 +87,7 @@ export default function WelcomePage() {
         </section>
 
         {/* AI-Powered Insights Section */}
-        <section className="w-full max-w-5xl mb-12 md:mb-20">
+        <section className="w-full max-w-5xl mb-16 md:mb-24">
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">AI-Powered Insights in Action</h3>
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8 items-start">
             <Card className="shadow-xl hover:shadow-2xl transition-shadow text-left bg-card/80 backdrop-blur-sm">
@@ -125,7 +125,7 @@ export default function WelcomePage() {
             <div className="flex flex-col items-center text-left">
                <div className="relative aspect-video w-full rounded-lg overflow-hidden shadow-xl group mb-4">
                 <Image
-                  src="https://placehold.co/500x281.png" /* 16:9 aspect ratio */
+                  src="https://placehold.co/500x281.png"
                   alt="AI processing illustration"
                   layout="fill"
                   objectFit="cover"
@@ -139,6 +139,29 @@ export default function WelcomePage() {
                 ClaimIntel transforms complex data into clear, actionable insights, empowering faster, more accurate decision-making for claims handlers.
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Customer Success Stories Section */}
+        <section className="w-full max-w-5xl py-12 md:py-16">
+          <h3 className="text-3xl font-bold font-headline text-foreground mb-12 text-center">
+            Real Stories, Real Relief
+          </h3>
+          <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-8">
+            <SuccessStoryCard
+              quote="I couldn't believe how fast my claim was processed! What used to take weeks was sorted in days."
+              story="After a minor car accident, Sarah was dreading the usual lengthy claims process. With ClaimIntel, she submitted her documents and photos from her phone in minutes. Her claim was reviewed and approved within 48 hours."
+              name="Sarah M."
+              imageSrc="https://placehold.co/80x80.png"
+              imageHint="happy person"
+            />
+            <SuccessStoryCard
+              quote="ClaimIntel made submitting my water damage claim so straightforward. No confusing forms, just a simple process."
+              story="When a pipe burst in David's kitchen, he was overwhelmed. ClaimIntel's guided submission process helped him upload all necessary information, including videos of the damage, leading to a quick assessment and approval for repairs."
+              name="David K."
+              imageSrc="https://placehold.co/80x80.png"
+              imageHint="satisfied customer"
+            />
           </div>
         </section>
 
@@ -194,3 +217,44 @@ function ImpactStatCard({ icon, value, title, description }: ImpactStatCardProps
     </Card>
   );
 }
+
+interface SuccessStoryCardProps {
+  quote: string;
+  story: string;
+  name: string;
+  imageSrc: string;
+  imageHint: string;
+}
+
+function SuccessStoryCard({ quote, story, name, imageSrc, imageHint }: SuccessStoryCardProps) {
+  return (
+    <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/70 backdrop-blur-sm text-left">
+      <CardHeader className="pb-3">
+        <div className="flex items-center mb-2">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+          ))}
+        </div>
+        <blockquote className="text-lg font-semibold leading-snug text-foreground">
+          <Quote className="inline-block h-5 w-5 text-primary/70 mr-1 -mt-1" />
+          {quote}
+        </blockquote>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">{story}</p>
+        <div className="flex items-center gap-3 pt-2">
+          <Image
+            src={imageSrc}
+            alt={name}
+            width={40}
+            height={40}
+            data-ai-hint={imageHint}
+            className="rounded-full"
+          />
+          <p className="text-sm font-semibold text-foreground">{name}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
