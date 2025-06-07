@@ -75,6 +75,9 @@ interface AppContextType {
   markNotificationAsRead: (notificationId: string) => void;
   clearNotifications: () => void;
   isLoading: boolean;
+  isKycVerifiedForSession: boolean;
+  completeKycSession: () => void;
+  resetKycSession: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -83,17 +86,22 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [claims, setClaims] = useState<Claim[]>(initialClaims);
   const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
   const [isLoading, setIsLoading] = useState(false);
-  const notificationIdCounter = useRef(initialNotifications.length); // Initialize counter based on initial data
+  const [isKycVerifiedForSession, setIsKycVerifiedForSession] = useState(false);
+  const notificationIdCounter = useRef(initialNotifications.length); 
 
   const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
     notificationIdCounter.current += 1;
     const newNotification: AppNotification = {
       ...notificationData,
-      id: `notif_${Date.now()}_${notificationIdCounter.current}`, // More unique ID
+      id: `notif_${Date.now()}_${notificationIdCounter.current}`,
       timestamp: new Date().toISOString(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); // Keep only last 20
+    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); 
+  }, []);
+
+  const resetKycSession = useCallback(() => {
+    setIsKycVerifiedForSession(false);
   }, []);
 
   const addClaim = useCallback(async (newClaimData: NewClaimFormData): Promise<Claim | null> => {
@@ -122,7 +130,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON.`, type: 'error', claimId: newClaimId });
               }
           } else {
-             // This case might occur if the AI returns an empty string or null for extractedInformation
              addNotification({ title: 'Document Processing Skipped', message: `No information extracted from ${newClaimData.documentName}.`, type: 'info', claimId: newClaimId });
           }
         } catch (error) {
@@ -168,6 +175,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       setClaims(prevClaims => [newClaim, ...prevClaims]);
       addNotification({ title: 'Claim Submitted', message: `New claim #${newClaim.id.substring(0,12)}... by ${newClaim.claimantName} received.`, type: 'success', claimId: newClaim.id });
+      resetKycSession(); // Reset KYC after successful claim submission
       setIsLoading(false);
       return newClaim;
     } catch (error) {
@@ -176,10 +184,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIsLoading(false);
       return null;
     }
-  }, [addNotification]);
+  }, [addNotification, resetKycSession]);
 
   const updateClaimStatus = async (claimId: string, status: ClaimStatus, notes?: string) => {
-    setIsLoading(true); // Keep for potential async operations even without DB
+    setIsLoading(true); 
     setClaims(prevClaims =>
       prevClaims.map(claim => {
         if (claim.id === claimId) {
@@ -214,12 +222,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setNotifications([]);
   };
   
-  // Effect to re-initialize state if initialClaims/initialNotifications were to change (e.g. via HMR or prop changes)
-  // For this specific reversion, it mainly ensures we start with the hardcoded data.
+  const completeKycSession = useCallback(() => {
+    setIsKycVerifiedForSession(true);
+  }, []);
+
+
   useEffect(() => {
     setClaims(initialClaims);
     setNotifications(initialNotifications);
     notificationIdCounter.current = initialNotifications.length;
+    setIsKycVerifiedForSession(false); // Ensure KYC is reset on full context re-init
   }, []);
 
 
@@ -234,7 +246,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNotification,
         markNotificationAsRead,
         clearNotifications,
-        isLoading
+        isLoading,
+        isKycVerifiedForSession,
+        completeKycSession,
+        resetKycSession,
       }}
     >
       {children}
@@ -249,5 +264,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    
