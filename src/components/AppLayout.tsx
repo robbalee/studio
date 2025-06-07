@@ -1,6 +1,7 @@
 "use client";
 
 import type React from 'react';
+import Link from 'next/link';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarInset, SidebarFooter } from '@/components/ui/sidebar';
 import { Logo } from '@/components/Logo';
 import { AppNavigation } from '@/components/AppNavigation';
@@ -13,7 +14,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={true} collapsible="icon">
       <Sidebar className="border-r">
         <SidebarHeader className="p-4 border-b">
-          <Logo />
+          <Link href="/" aria-label="Go to homepage">
+            <Logo />
+          </Link>
         </SidebarHeader>
         <SidebarContent className="p-2">
           <AppNavigation />

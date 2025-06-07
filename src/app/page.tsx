@@ -10,7 +10,7 @@ export default function WelcomePage() {
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
         <div className="flex items-center gap-2 text-primary">
           <ShieldCheck className="h-10 w-10" />
-          <h1 className="text-3xl font-bold font-headline">InsureAI</h1>
+          <h1 className="text-3xl font-bold font-headline">ClaimIntel</h1>
         </div>
         <div className="flex items-center gap-3">
           <Button asChild variant="outline">
@@ -30,13 +30,13 @@ export default function WelcomePage() {
           Intelligent Claims Processing, Simplified.
         </h2>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10">
-          InsureAI leverages cutting-edge AI to streamline your insurance claims, reduce fraud, and improve efficiency.
+          ClaimIntel leverages cutting-edge AI to streamline your insurance claims, reduce fraud, and improve efficiency.
         </p>
         <div className="grid md:grid-cols-2 gap-8 items-center max-w-4xl w-full mb-12">
           <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl">
             <Image 
               src="https://placehold.co/600x400.png" 
-              alt="InsureAI Dashboard Preview" 
+              alt="ClaimIntel Dashboard Preview" 
               layout="fill"
               objectFit="cover"
               data-ai-hint="insurance dashboard"
@@ -66,7 +66,7 @@ export default function WelcomePage() {
       </main>
 
       <footer className="text-center py-8 text-muted-foreground text-sm border-t border-border">
-        <p>&copy; {new Date().getFullYear()} InsureAI. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} ClaimIntel. All rights reserved.</p>
       </footer>
     </div>
   );
