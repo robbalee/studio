@@ -26,8 +26,8 @@ export default function WelcomePage() {
       </header>
 
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex flex-col items-center text-center">
-        <h2 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-6">
-          Effortless Claims, Powerful Insights
+        <h2 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-6 max-w-2xl">
+          Effortless Claims, <br className="hidden md:block" /> Powerful Insights
         </h2>
         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mb-10">
           A simpler, intelligent way to fill your insurance claims. We're transforming the claims journey for our users.
@@ -36,27 +36,27 @@ export default function WelcomePage() {
           <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl">
             <Image 
               src="https://placehold.co/600x400.png" 
-              alt="ClaimIntel Dashboard Preview" 
+              alt="ClaimIntel in action" 
               layout="fill"
               objectFit="cover"
-              data-ai-hint="insurance dashboard"
+              data-ai-hint="insurance technology"
             />
           </div>
           <div className="flex flex-col gap-6 text-left">
             <FeatureItem
               icon={<Smartphone className="text-primary h-7 w-7" />}
-              title="Simple & Fast Claims for Policyholders"
-              description="File claims effortlessly, upload documents and media, and track progress with our user-friendly platform. Get quicker resolutions and stay informed every step of the way."
+              title="Easy Claims for You"
+              description="File and track claims simply. Upload files, get updates, and resolve faster."
             />
             <FeatureItem
               icon={<FileText className="text-primary h-7 w-7" />}
-              title="Streamlined Operations for Insurers"
-              description="Automate document processing, extract key information instantly, and reduce manual workloads with our AI-powered tools, leading to faster cycle times."
+              title="Smarter Insurer Operations"
+              description="Automate document intake and data extraction with AI. Boost efficiency."
             />
             <FeatureItem
               icon={<ShieldCheck className="text-primary h-7 w-7" />}
-              title="Intelligent Fraud Detection & Decision Support"
-              description="Leverage advanced AI to identify potential fraud, assess risk accurately, and provide your team with actionable insights for confident decision-making."
+              title="AI-Powered Fraud Detection"
+              description="Identify risks accurately with advanced AI. Make confident decisions."
             />
           </div>
         </div>
@@ -89,4 +89,3 @@ function FeatureItem({ icon, title, description }: FeatureItemProps) {
     </div>
   );
 }
-
