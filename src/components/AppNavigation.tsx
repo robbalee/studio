@@ -44,12 +44,13 @@ export function AppNavigation() {
 
         return (
           <SidebarMenuItem key={item.href}>
-            <Link href={item.href} passHref legacyBehavior>
+            <Link href={item.href}>
               <SidebarMenuButton
                 variant="ghost"
                 className="w-full justify-start"
                 isActive={isActive}
                 tooltip={{ children: item.label, side: 'right', className: 'bg-card text-card-foreground border-border' }}
+                asChild={false} // Ensure SidebarMenuButton renders as a button, Link will provide the <a>
               >
                 <item.icon className="h-5 w-5" />
                 <span className="truncate group-data-[collapsible=icon]:hidden">{item.label}</span>
