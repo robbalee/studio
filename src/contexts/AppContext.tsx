@@ -3,7 +3,7 @@
 
 import type React from 'react';
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import type { Claim, AppNotification, ClaimStatus, ConsistencyReport } from '@/lib/types';
+import type { Claim, AppNotification, ClaimStatus, ConsistencyReport, ExtractedFieldWithOptionalBox } from '@/lib/types';
 import { assessFraudRisk } from '@/ai/flows/fraud-assessment';
 import { extractDocumentInformation } from '@/ai/flows/document-processing';
 
@@ -24,7 +24,12 @@ const initialClaims: Claim[] = [
     status: 'Pending',
     submissionDate: '2024-07-20T10:00:00Z',
     lastUpdatedDate: '2024-07-20T10:00:00Z',
-    extractedInfo: { fromDoc: "some info", policyHolder: "Alice", incidentLocation: "Mall Parking Lot" },
+    extractedInfo: { 
+      policyNumber: { value: "POL-001", boundingBox: { x: 0.1, y: 0.05, width: 0.2, height: 0.03, page: 1 } },
+      claimantName: { value: "Alice Wonderland", boundingBox: { x: 0.1, y: 0.10, width: 0.3, height: 0.03, page: 1 } },
+      incidentLocation: { value: "Mall Parking Lot", boundingBox: null },
+      vehicleDamage: { value: "Scratches on rear bumper", boundingBox: { x: 0.1, y: 0.25, width: 0.5, height: 0.08, page: 1 } }
+    },
     fraudAssessment: { riskScore: 0.1, fraudIndicators: ["Low impact collision"], summary: "Low risk, standard claim." },
     consistencyReport: {
       status: 'Consistent',
@@ -47,7 +52,11 @@ const initialClaims: Claim[] = [
     status: 'Approved',
     submissionDate: '2024-07-21T14:30:00Z',
     lastUpdatedDate: '2024-07-22T09:15:00Z',
-    extractedInfo: { invoiceTotal: "$500", serviceDate: "2024-07-19", plumberName: "FixIt Plumbing" },
+    extractedInfo: { 
+      invoiceTotal: { value: "$500", boundingBox: { x: 0.7, y: 0.8, width: 0.15, height: 0.04, page: 1 } },
+      serviceDate: { value: "2024-07-19", boundingBox: { x: 0.1, y: 0.15, width: 0.2, height: 0.03, page: 1 } },
+      plumberName: { value: "FixIt Plumbing", boundingBox: null }
+    },
     fraudAssessment: { riskScore: 0.05, fraudIndicators: [], summary: "Straightforward water damage claim. Approved." },
     consistencyReport: {
       status: 'Inconsistent',
@@ -123,9 +132,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const addClaim = useCallback(async (newClaimData: NewClaimFormData): Promise<Claim | null> => {
     setIsLoading(true);
     let newClaimId = `clm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    let currentExtractedInfo: Record<string, ExtractedFieldWithOptionalBox> | undefined;
 
     try {
-      let extractedInfo: Record<string, any> | undefined;
       if (newClaimData.documentUri && newClaimData.documentName) {
         const docType = newClaimData.documentName.endsWith('.pdf') ? 'PDF Document' :
                         newClaimData.documentName.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' :
@@ -136,13 +145,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             documentDataUri: newClaimData.documentUri,
             documentType: docType,
           });
-          if (extractionResult.extractedInformation) {
+
+          if (extractionResult.extractedFieldsJson) {
              try {
-                extractedInfo = JSON.parse(extractionResult.extractedInformation);
+                const parsedJson = JSON.parse(extractionResult.extractedFieldsJson);
+                currentExtractedInfo = parsedJson as Record<string, ExtractedFieldWithOptionalBox>;
                 addNotification({ title: 'Document Processed', message: `Info extracted from ${newClaimData.documentName}.`, type: 'success', claimId: newClaimId });
               } catch (e) {
-                console.error("Failed to parse extractedInformation JSON string:", e);
-                extractedInfo = { parsingError: "Failed to parse AI response for extracted information." };
+                console.error("Failed to parse extractedFieldsJson string:", e);
+                currentExtractedInfo = { parsingError: { value: "Failed to parse AI response for extracted information." } };
                 addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON.`, type: 'error', claimId: newClaimId });
               }
           } else {
@@ -157,7 +168,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       let fraudAssessmentResult;
       try {
         const assessmentInput = {
-          claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(extractedInfo || {})}`,
+          claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(currentExtractedInfo || {})}`,
           supportingDocumentUri: newClaimData.documentUri,
           imageEvidenceUris: newClaimData.imageUris,
           videoEvidenceUri: newClaimData.videoUri,
@@ -169,31 +180,36 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNotification({ title: 'Fraud Assessment Failed', message: `Could not assess fraud risk for ${newClaimData.claimantName}.`, type: 'error', claimId: newClaimId });
       }
 
-      // Simulate Consistency Report Generation
       let consistencyReport: ConsistencyReport | undefined;
-      if (newClaimData.documentUri && extractedInfo && fraudAssessmentResult) {
-        const isConsistent = Math.random() > 0.4; // 60% chance of being consistent for demo
+      if (newClaimData.documentUri && currentExtractedInfo && fraudAssessmentResult) {
+        const isConsistent = Math.random() > 0.4; 
         const primaryDocName = newClaimData.documentName || "Submitted Claim Document";
         const secondaryDocTypes = ["Police Report (on file)", "Witness Statement (on file)", "Internal System Record"];
         const secondaryDocName = secondaryDocTypes[Math.floor(Math.random() * secondaryDocTypes.length)];
-        const commonFields = ["Incident Date", "Claimant Name", "Policy Number", "Vehicle Make/Model"];
+        const commonFields = ["Incident Date", "Claimant Name", "Policy Number"];
         const fieldForComparison = commonFields[Math.floor(Math.random() * commonFields.length)];
+        
+        const getExtractedValue = (fieldName: string) => {
+            const key = Object.keys(currentExtractedInfo || {}).find(k => k.toLowerCase().replace(/\s/g, '') === fieldName.toLowerCase().replace(/\s/g, ''));
+            return key ? String((currentExtractedInfo?.[key] as ExtractedFieldWithOptionalBox)?.value || "N/A") : String(newClaimData[fieldName.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "N/A");
+        };
+
 
         if (isConsistent) {
           consistencyReport = {
             status: 'Consistent',
             summary: `Key details (e.g., Claimant Name, ${fieldForComparison}) appear consistent between ${primaryDocName} and ${secondaryDocName}.`,
             details: [
-              { documentA: primaryDocName, documentB: secondaryDocName, field: fieldForComparison, valueA: String(extractedInfo?.[fieldForComparison.toLowerCase().replace(/\s/g, '')] || newClaimData[fieldForComparison.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "N/A"), valueB: String(extractedInfo?.[fieldForComparison.toLowerCase().replace(/\s/g, '')] || newClaimData[fieldForComparison.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "N/A"), finding: 'Match' }
+              { documentA: primaryDocName, documentB: secondaryDocName, field: fieldForComparison, valueA: getExtractedValue(fieldForComparison), valueB: getExtractedValue(fieldForComparison), finding: 'Match' }
             ]
           };
         } else {
-          const valueA = String(extractedInfo?.[fieldForComparison.toLowerCase().replace(/\s/g, '')] || newClaimData[fieldForComparison.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "Value A");
-          let valueB = "Different Value B";
+          const valueA = getExtractedValue(fieldForComparison);
+          let valueB = "Different Value B - " + Math.random().toString(36).substring(7);
           if (fieldForComparison === "Incident Date") {
             valueB = new Date(Date.parse(newClaimData.incidentDate) - (Math.floor(Math.random() * 5) + 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
           } else if (fieldForComparison === "Claimant Name") {
-            valueB = newClaimData.claimantName.split(" ")[0] + " Smith"; // Slightly different name
+            valueB = newClaimData.claimantName.split(" ")[0] + " Smithson"; 
           }
 
           consistencyReport = {
@@ -233,7 +249,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         status: 'Pending',
         submissionDate: new Date().toISOString(),
         lastUpdatedDate: new Date().toISOString(),
-        extractedInfo: extractedInfo || {},
+        extractedInfo: currentExtractedInfo || {},
         fraudAssessment: fraudAssessmentResult,
         consistencyReport: consistencyReport,
         notes: '',
@@ -241,7 +257,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       setClaims(prevClaims => [newClaim, ...prevClaims]);
       addNotification({ title: 'Claim Submitted', message: `New claim #${newClaim.id.substring(0,12)}... by ${newClaim.claimantName} received.`, type: 'success', claimId: newClaim.id });
-      resetKycSession(); // Reset KYC after successful claim submission
+      resetKycSession(); 
       setIsLoading(false);
       return newClaim;
     } catch (error) {
@@ -294,37 +310,46 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
 
   useEffect(() => {
-    // On initial load, ensure existing claims also have some consistency report data for the demo
-    const claimsWithInitialConsistency = initialClaims.map(claim => {
-        if (!claim.consistencyReport) {
-            const isConsistent = Math.random() > 0.3;
-            const primaryDocName = claim.documentName || "Main Claim Document";
-            const secondaryDocName = "Archived Policy Record";
-            if (isConsistent) {
-                return {
-                    ...claim,
-                    consistencyReport: {
-                        status: 'Consistent' as const,
-                        summary: `Historical data for ${claim.claimantName} appears consistent.`,
-                    }
-                };
-            } else {
-                 return {
-                    ...claim,
-                    consistencyReport: {
-                        status: 'Inconsistent' as const,
-                        summary: `Minor discrepancy found in address history for ${claim.claimantName} when compared to ${secondaryDocName}.`,
-                        details: [{ documentA: primaryDocName, documentB: secondaryDocName, field: 'Address', valueA: '123 Main St', valueB: '124 Main St', finding: 'Mismatch' as const }]
-                    }
-                 }
+    setClaims(prevClaims => prevClaims.map(claim => {
+        const updatedExtractedInfo: Record<string, ExtractedFieldWithOptionalBox> = {};
+        if (claim.extractedInfo) {
+            for (const key in claim.extractedInfo) {
+                const currentVal = claim.extractedInfo[key];
+                if (typeof currentVal === 'object' && currentVal !== null && 'value' in currentVal) {
+                    // Already in new format
+                    updatedExtractedInfo[key] = currentVal as ExtractedFieldWithOptionalBox;
+                } else {
+                    // Old format, convert it
+                    updatedExtractedInfo[key] = { value: currentVal, boundingBox: null };
+                }
             }
         }
-        return claim;
-    });
-    setClaims(claimsWithInitialConsistency);
+
+        return {
+            ...claim,
+            extractedInfo: Object.keys(updatedExtractedInfo).length > 0 ? updatedExtractedInfo : claim.extractedInfo, // Keep original if it was empty/undefined
+            ...(claim.id === 'clm_1749303123456_abc' && !claim.extractedInfo?.policyNumber?.boundingBox && // Ensure mock boxes for Alice
+              { extractedInfo: {
+                  policyNumber: { value: "POL-001", boundingBox: { x: 0.1, y: 0.05, width: 0.2, height: 0.03, page: 1 } },
+                  claimantName: { value: "Alice Wonderland", boundingBox: { x: 0.1, y: 0.10, width: 0.3, height: 0.03, page: 1 } },
+                  incidentLocation: { value: "Mall Parking Lot", boundingBox: null },
+                  vehicleDamage: { value: "Scratches on rear bumper", boundingBox: { x: 0.1, y: 0.25, width: 0.5, height: 0.08, page: 1 } }
+                }
+              }
+            ),
+             ...(claim.id === 'clm_1749303123789_def' && !claim.extractedInfo?.invoiceTotal?.boundingBox && // Ensure mock boxes for Bob
+              { extractedInfo: {
+                  invoiceTotal: { value: "$500", boundingBox: { x: 0.7, y: 0.8, width: 0.15, height: 0.04, page: 1 } },
+                  serviceDate: { value: "2024-07-19", boundingBox: { x: 0.1, y: 0.15, width: 0.2, height: 0.03, page: 1 } },
+                  plumberName: { value: "FixIt Plumbing", boundingBox: null }
+                }
+              }
+            )
+        };
+    }));
     setNotifications(initialNotifications);
     notificationIdCounter.current = initialNotifications.length;
-    setIsKycVerifiedForSession(false); // Ensure KYC is reset on full context re-init
+    setIsKycVerifiedForSession(false); 
   }, []);
 
 

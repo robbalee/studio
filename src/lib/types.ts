@@ -3,6 +3,19 @@ import type { AssessFraudRiskOutput } from '@/ai/flows/fraud-assessment';
 
 export type ClaimStatus = 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Information Requested';
 
+export interface BoundingBox {
+  x: number; // Top-left x, normalized (0-1)
+  y: number; // Top-left y, normalized (0-1)
+  width: number; // Width, normalized (0-1)
+  height: number; // Height, normalized (0-1)
+  page: number; // Page number, 1-indexed
+}
+
+export interface ExtractedFieldWithOptionalBox {
+  value: string | Record<string, any>; // Value can be string or nested object
+  boundingBox?: BoundingBox | null;
+}
+
 export interface ConsistencyReport {
   status: 'Not Run' | 'Consistent' | 'Inconsistent' | 'Partial';
   summary: string;
@@ -29,7 +42,7 @@ export interface Claim {
   videoName?: string;
   videoUri?: string; // Store as data URI for a single video
   status: ClaimStatus;
-  extractedInfo?: Record<string, any>; // Value can be string or nested object
+  extractedInfo?: Record<string, ExtractedFieldWithOptionalBox>; 
   fraudAssessment?: AssessFraudRiskOutput;
   consistencyReport?: ConsistencyReport;
   submissionDate: string; // ISO string

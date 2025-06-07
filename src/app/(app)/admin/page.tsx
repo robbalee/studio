@@ -4,29 +4,56 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Image from 'next/image';
-import { AlertTriangle, FileText, Brain, CheckCircle2, ClipboardCheck, Files, SearchCheck } from 'lucide-react';
-import type { ConsistencyReport } from '@/lib/types';
+import { AlertTriangle, FileText, Brain, CheckCircle2, ClipboardCheck, Files, SearchCheck, LocateFixed } from 'lucide-react';
+import type { ConsistencyReport, ExtractedFieldWithOptionalBox } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function AdminReportsPage() {
   const { claims } = useAppContext();
+  const { toast } = useToast();
 
-  const renderExtractedInfo = (info: Record<string, any> | undefined) => {
+  const handleLocateClick = (fieldName: string, box: any) => {
+    if (box) {
+      toast({
+        title: "Entity Location (Conceptual)",
+        description: `Field '${fieldName}' is at (x:${box.x.toFixed(2)}, y:${box.y.toFixed(2)}, w:${box.width.toFixed(2)}, h:${box.height.toFixed(2)}) on page ${box.page}. Visual highlighting on document TBD.`,
+        duration: 5000,
+      });
+    }
+  };
+
+  const renderExtractedInfo = (info: Record<string, ExtractedFieldWithOptionalBox> | undefined) => {
     if (!info || Object.keys(info).length === 0) {
       return <p className="text-sm text-muted-foreground italic">No information extracted or N/A.</p>;
     }
     return (
       <ul className="list-disc space-y-1 pl-4">
-        {Object.entries(info).map(([key, value]) => (
+        {Object.entries(info).map(([key, fieldDetail]) => (
           <li key={key} className="text-sm">
-            <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
-            {typeof value === 'object' && value !== null ? (
+            <div className="flex items-center">
+              <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+              {fieldDetail.boundingBox && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-2 h-5 w-5 p-0 text-primary hover:bg-primary/10"
+                  title={`Locate ${key} on document`}
+                  onClick={() => handleLocateClick(key, fieldDetail.boundingBox)}
+                >
+                  <LocateFixed className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {typeof fieldDetail.value === 'object' && fieldDetail.value !== null ? (
               <pre className="ml-2 mt-1 p-2 bg-muted/50 rounded-md text-xs whitespace-pre-wrap break-all">
-                {JSON.stringify(value, null, 2)}
+                {JSON.stringify(fieldDetail.value, null, 2)}
               </pre>
             ) : (
-              <span className="ml-1 text-muted-foreground">{String(value)}</span>
+              <span className="ml-1 text-muted-foreground">{String(fieldDetail.value)}</span>
             )}
           </li>
         ))}
