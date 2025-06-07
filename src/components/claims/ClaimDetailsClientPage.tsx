@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -176,9 +177,20 @@ export function ClaimDetailsClientPage() {
               </CardHeader>
               <CardContent>
                 {claim.extractedInfo && Object.keys(claim.extractedInfo).length > 0 ? (
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-2 text-sm">
                     {Object.entries(claim.extractedInfo).map(([key, value]) => (
-                      <li key={key}><span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span> {value}</li>
+                      <li key={key} className="flex flex-col">
+                        <div>
+                          <span className="font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                        </div>
+                        {typeof value === 'object' && value !== null ? (
+                          <pre className="ml-2 mt-1 p-2 bg-muted/50 rounded-md text-xs whitespace-pre-wrap break-all">
+                            {JSON.stringify(value, null, 2)}
+                          </pre>
+                        ) : (
+                          <span className="ml-2">{String(value)}</span>
+                        )}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -282,3 +294,4 @@ function InfoItem({ icon: Icon, label, value, children, isLongText = false }: In
     </div>
   );
 }
+
