@@ -36,11 +36,10 @@ export default function WelcomePage() {
         <div className="grid md:grid-cols-2 gap-8 items-center max-w-4xl w-full mb-12">
           <div className="relative aspect-[4/3] md:aspect-video rounded-lg overflow-hidden shadow-2xl group">
             <Image
-              src="https://placehold.co/600x450.png"
+              src="https://storage.googleapis.com/generative-ai-for-developers/images/insurance_claim_illustration.png"
               alt="ClaimIntel in action"
               layout="fill"
               objectFit="cover"
-              data-ai-hint="AI claims"
               className="group-hover:scale-105 transition-transform duration-300"
             />
              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
@@ -194,4 +193,3 @@ function ImpactStatCard({ icon, value, title, description }: ImpactStatCardProps
     </Card>
   );
 }
-
