@@ -39,7 +39,7 @@ export default function WelcomePage() {
               alt="ClaimIntel in action" 
               layout="fill"
               objectFit="cover"
-              data-ai-hint="insurance technology"
+              data-ai-hint="AI claims"
             />
           </div>
           <div className="flex flex-col gap-6 text-left">
@@ -89,4 +89,3 @@ function FeatureItem({ icon, title, description }: FeatureItemProps) {
     </div>
   );
 }
-
