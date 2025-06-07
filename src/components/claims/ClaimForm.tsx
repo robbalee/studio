@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type React from 'react';
 import { useState } from "react";
-import { Loader2, UploadCloud, Image as ImageIcon, FileText } from "lucide-react";
+import { Loader2, UploadCloud, Image as ImageIcon } from "lucide-react";
 
 const MAX_FILE_SIZE_DOC = 5 * 1024 * 1024; // 5MB for single document
 const MAX_FILE_SIZE_IMG = 2 * 1024 * 1024; // 2MB for each image
@@ -61,28 +61,6 @@ export function ClaimForm() {
       incidentDescription: "",
     },
   });
-
-  const handleDocFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      setDocFileName(files[0].name);
-      form.setValue("document", files);
-    } else {
-      setDocFileName(null);
-      form.setValue("document", undefined);
-    }
-  };
-
-  const handleImageFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      setImageFileNames(Array.from(files).map(file => file.name));
-      form.setValue("images", files);
-    } else {
-      setImageFileNames([]);
-      form.setValue("images", undefined);
-    }
-  };
 
   const readFileAsDataURL = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -227,30 +205,43 @@ export function ClaimForm() {
             <FormField
               control={form.control}
               name="document"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Supporting Document (Optional)</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                       <Input
-                        id="document-upload"
-                        type="file"
-                        className="hidden"
-                        onChange={handleDocFileChange}
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
-                      />
-                      <label
-                        htmlFor="document-upload"
-                        className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      >
-                        <span className="flex flex-col items-center space-y-1 text-center">
-                          <UploadCloud className="w-8 h-8 text-muted-foreground" />
-                          <span className="font-medium text-muted-foreground">
-                            {docFileName || "Click to upload main document"}
+                    <div> {/* Single wrapper div for FormControl */}
+                      <div className="relative">
+                        <Input
+                          id="document-upload"
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            field.onChange(files);
+                            if (files && files.length > 0) {
+                              setDocFileName(files[0].name);
+                            } else {
+                              setDocFileName(null);
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="document-upload"
+                          className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          <span className="flex flex-col items-center space-y-1 text-center">
+                            <UploadCloud className="w-8 h-8 text-muted-foreground" />
+                            <span className="font-medium text-muted-foreground">
+                              {docFileName || "Click to upload main document"}
+                            </span>
+                             {docFileName && <span className="text-xs text-muted-foreground">{docFileName}</span>}
                           </span>
-                           {docFileName && <span className="text-xs text-muted-foreground">{docFileName}</span>}
-                        </span>
-                      </label>
+                        </label>
+                      </div>
                     </div>
                   </FormControl>
                   <FormDescription>
@@ -264,19 +255,30 @@ export function ClaimForm() {
             <FormField
               control={form.control}
               name="images"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Supporting Images (Optional, up to {MAX_IMAGES})</FormLabel>
                   <FormControl>
-                    <div> {/* Added this div wrapper */}
+                    <div> {/* Single wrapper div for FormControl */}
                       <div className="relative">
-                         <Input
+                        <Input
                           id="images-upload"
                           type="file"
                           multiple
                           className="hidden"
-                          onChange={handleImageFilesChange}
                           accept="image/jpeg,image/png,image/gif,image/webp"
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            field.onChange(files);
+                            if (files && files.length > 0) {
+                              setImageFileNames(Array.from(files).map(f => f.name));
+                            } else {
+                              setImageFileNames([]);
+                            }
+                          }}
                         />
                         <label
                           htmlFor="images-upload"
@@ -298,7 +300,7 @@ export function ClaimForm() {
                           </ul>
                         </div>
                       )}
-                    </div> {/* End of added div wrapper */}
+                    </div>
                   </FormControl>
                   <FormDescription>
                     Max {MAX_IMAGES} images. Each up to {MAX_FILE_SIZE_IMG / (1024*1024)}MB. Accepted: JPG, PNG, GIF, WEBP.
@@ -324,4 +326,3 @@ export function ClaimForm() {
     </Card>
   );
 }
-
