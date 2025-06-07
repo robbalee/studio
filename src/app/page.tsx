@@ -1,6 +1,7 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, TrendingUp, FileText } from 'lucide-react';
+import { ShieldCheck, TrendingUp, FileText, Brain } from 'lucide-react';
 import Image from 'next/image';
 
 export default function WelcomePage() {
@@ -11,9 +12,17 @@ export default function WelcomePage() {
           <ShieldCheck className="h-10 w-10" />
           <h1 className="text-3xl font-bold font-headline">InsureAI</h1>
         </div>
-        <Button asChild>
-          <Link href="/dashboard">Go to Dashboard</Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button asChild variant="outline">
+            <Link href="/admin">
+              <Brain className="mr-2 h-4 w-4" />
+              AI Reports
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard">Go to Dashboard</Link>
+          </Button>
+        </div>
       </header>
 
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex flex-col items-center text-center">

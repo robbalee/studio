@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FilePlus2, List, Bell } from 'lucide-react';
+import { LayoutDashboard, FilePlus2, List, Bell, Brain } from 'lucide-react';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
 import { useAppContext } from '@/contexts/AppContext';
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/claims/new', label: 'New Claim', icon: FilePlus2 },
   { href: '/claims', label: 'All Claims', icon: List },
   { href: '/notifications', label: 'Notifications', icon: Bell, notificationKey: 'unreadNotifications' },
+  { href: '/admin', label: 'AI Reports', icon: Brain },
 ];
 
 export function AppNavigation() {

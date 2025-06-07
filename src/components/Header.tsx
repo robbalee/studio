@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -10,6 +11,7 @@ const getBreadcrumbName = (segment: string): string => {
   if (segment === 'claims') return 'Claims';
   if (segment === 'new') return 'New Claim';
   if (segment === 'notifications') return 'Notifications';
+  if (segment === 'admin') return 'AI Reports';
   if (segment.startsWith('clm_')) return 'Claim Details'; // For dynamic claim IDs
   return segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
 };
