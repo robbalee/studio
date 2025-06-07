@@ -27,10 +27,10 @@ export default function WelcomePage() {
 
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 flex flex-col items-center text-center">
         <h2 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-6">
-          ClaimIntel: Effortless Claims for Policyholders, Powerful Insights for Insurers.
+          Effortless Claims, Powerful Insights
         </h2>
         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mb-10">
-          Experience a simpler, faster way to file and manage your insurance claims. For insurers, ClaimIntel offers cutting-edge AI to streamline operations, detect fraud, and enhance decision-making. We're transforming the claims journey for everyone.
+          A simpler, intelligent way to fill your insurance claims. We're transforming the claims journey for our users.
         </p>
         <div className="grid md:grid-cols-2 gap-8 items-center max-w-4xl w-full mb-12">
           <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl">
@@ -89,3 +89,4 @@ function FeatureItem({ icon, title, description }: FeatureItemProps) {
     </div>
   );
 }
+
