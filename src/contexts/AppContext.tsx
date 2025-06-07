@@ -331,7 +331,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return result.answer;
     } catch (error) {
       console.error("Error asking question on document:", error);
-      const errorMessage = "Sorry, I encountered an error trying to answer that question. The AI model might be unavailable or the document could not be processed.";
+      const errorMessage = `Sorry, I encountered an error trying to answer that question. The AI model might be unavailable or the document could not be processed. Details: ${error instanceof Error ? error.message : String(error)}`;
       setQaAnswer(errorMessage);
       addNotification({ title: "Q&A Error", message: "The AI could not answer your question.", type: "error", claimId });
       return errorMessage;
@@ -346,25 +346,53 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
 
   useEffect(() => {
-    // Ensure initial claims have valid (even if placeholder) document URIs for Q&A testing
     const updatedInitialClaims = initialClaims.map(claim => {
-      if (claim.documentUri && claim.documentUri.startsWith('https://placehold.co')) {
-        return {
-          ...claim,
-          // Replace placeholder.co with a tiny valid data URI if it's a placeholder
-          // This is important because the Q&A flow expects a data URI
-          documentUri: 'data:text/plain;base64,SGVsbG8sIHdvcmxkIQ==', // "Hello, world!"
-          documentName: claim.documentName || 'placeholder_document.txt'
-        };
+      let updatedClaim = { ...claim };
+
+      if (typeof updatedClaim.extractedInfo === 'string') {
+        try {
+          const parsedOldInfo = JSON.parse(updatedClaim.extractedInfo);
+          const newExtractedInfo: Record<string, ExtractedFieldWithOptionalBox> = {};
+          for (const key in parsedOldInfo) {
+            newExtractedInfo[key] = { value: String(parsedOldInfo[key]), boundingBox: null };
+          }
+          updatedClaim.extractedInfo = newExtractedInfo;
+        } catch (e) {
+          console.warn(`Could not parse old extractedInfo for claim ${claim.id}`);
+          updatedClaim.extractedInfo = { migrationError: { value: "Could not parse old data.", boundingBox: null } };
+        }
       }
-      if (!claim.documentUri) { // If no documentUri, provide a default for testing
-         return {
-          ...claim,
-          documentUri: 'data:text/plain;base64,Tm8gZG9jdW1lbnQgdXBsb2FkZWQu', // "No document uploaded."
-          documentName: 'no_document.txt'
-        };
+
+      const placeholderPdfUri = 'data:application/pdf;base64,JVBERi0xLjQKJ...'; 
+      const placeholderPngUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+      if (updatedClaim.documentUri && (updatedClaim.documentUri.startsWith('https://placehold.co') || updatedClaim.documentUri === placeholderPdfUri || updatedClaim.documentUri === placeholderPngUri )) {
+        let representativeText = `This is a placeholder document for claim ID ${claim.id}. `;
+        if (claim.id.includes('abc')) { // Alice's claim
+            representativeText += `Claimant: Alice Wonderland. Policy Number: POL-001. Incident Date: 2024-07-15. Document name: ${claim.documentName || 'AccidentReport.pdf'}. Original Incident Description: ${claim.incidentDescription}`;
+        } else if (claim.id.includes('def')) { // Bob's claim
+            representativeText += `Claimant: Bob The Builder. Policy Number: POL-002. Incident Date: 2024-07-18. Document name: ${claim.documentName || 'PlumberInvoice.pdf'}. Original Incident Description: ${claim.incidentDescription}. An extracted invoice total might be around $500.`;
+        } else {
+            representativeText += `Details for this claim: ${claim.incidentDescription}.`;
+        }
+        // Safely encode UTF-8 string to Base64 for data URI
+        try {
+          updatedClaim.documentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(representativeText)))}`;
+        } catch (e) {
+            // Fallback for environments where unescape or encodeURIComponent might fail with specific characters
+            updatedClaim.documentUri = `data:text/plain;base64,${btoa(representativeText)}`;
+        }
+        updatedClaim.documentName = updatedClaim.documentName || 'placeholder_summary.txt';
+      } else if (!updatedClaim.documentUri) {
+        const noDocText = "No document content available for this claim.";
+        try {
+            updatedClaim.documentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(noDocText)))}`;
+        } catch (e) {
+            updatedClaim.documentUri = `data:text/plain;base64,${btoa(noDocText)}`;
+        }
+        updatedClaim.documentName = 'no_document_content.txt';
       }
-      return claim;
+      return updatedClaim;
     });
     setClaims(updatedInitialClaims);
     
@@ -408,3 +436,5 @@ export const useAppContext = () => {
   return context;
 };
 
+
+    
