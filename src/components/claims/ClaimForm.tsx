@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -65,7 +66,7 @@ export function ClaimForm() {
     const files = event.target.files;
     if (files && files.length > 0) {
       setDocFileName(files[0].name);
-      form.setValue("document", files); 
+      form.setValue("document", files);
     } else {
       setDocFileName(null);
       form.setValue("document", undefined);
@@ -161,7 +162,7 @@ export function ClaimForm() {
     <Card className="max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline">Submit New Insurance Claim</CardTitle>
-        <CardDescription>Please fill in the details below. Attach a main supporting document and up to ${MAX_IMAGES} images if necessary.</CardDescription>
+        <CardDescription>Please fill in the details below. Attach a main supporting document and up to {MAX_IMAGES} images if necessary.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -226,19 +227,19 @@ export function ClaimForm() {
             <FormField
               control={form.control}
               name="document"
-              render={() => ( 
+              render={() => (
                 <FormItem>
                   <FormLabel>Supporting Document (Optional)</FormLabel>
                   <FormControl>
                     <div className="relative">
-                       <Input 
+                       <Input
                         id="document-upload"
-                        type="file" 
+                        type="file"
                         className="hidden"
-                        onChange={handleDocFileChange} 
+                        onChange={handleDocFileChange}
                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
                       />
-                      <label 
+                      <label
                         htmlFor="document-upload"
                         className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       >
@@ -253,7 +254,7 @@ export function ClaimForm() {
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Max file size: ${MAX_FILE_SIZE_DOC / (1024*1024)}MB. Accepted: PDF, DOC, DOCX, JPG, PNG, ZIP.
+                    Max file size: {MAX_FILE_SIZE_DOC / (1024*1024)}MB. Accepted: PDF, DOC, DOCX, JPG, PNG, ZIP.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -267,38 +268,40 @@ export function ClaimForm() {
                 <FormItem>
                   <FormLabel>Supporting Images (Optional, up to {MAX_IMAGES})</FormLabel>
                   <FormControl>
-                     <div className="relative">
-                       <Input 
-                        id="images-upload"
-                        type="file" 
-                        multiple
-                        className="hidden"
-                        onChange={handleImageFilesChange} 
-                        accept="image/jpeg,image/png,image/gif,image/webp"
-                      />
-                      <label 
-                        htmlFor="images-upload"
-                        className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                      >
-                        <span className="flex flex-col items-center space-y-1 text-center">
-                          <ImageIcon className="w-8 h-8 text-muted-foreground" />
-                          <span className="font-medium text-muted-foreground">
-                            {imageFileNames.length > 0 ? `${imageFileNames.length} image(s) selected` : "Click to upload images"}
+                    <div> {/* Added this div wrapper */}
+                      <div className="relative">
+                         <Input
+                          id="images-upload"
+                          type="file"
+                          multiple
+                          className="hidden"
+                          onChange={handleImageFilesChange}
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                        />
+                        <label
+                          htmlFor="images-upload"
+                          className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          <span className="flex flex-col items-center space-y-1 text-center">
+                            <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                            <span className="font-medium text-muted-foreground">
+                              {imageFileNames.length > 0 ? `${imageFileNames.length} image(s) selected` : "Click to upload images"}
+                            </span>
                           </span>
-                        </span>
-                      </label>
-                    </div>
-                    {imageFileNames.length > 0 && (
-                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        <p className="font-medium text-foreground">Selected images:</p>
-                        <ul className="list-disc list-inside pl-4">
-                          {imageFileNames.map(name => <li key={name} className="truncate">{name}</li>)}
-                        </ul>
+                        </label>
                       </div>
-                    )}
+                      {imageFileNames.length > 0 && (
+                        <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                          <p className="font-medium text-foreground">Selected images:</p>
+                          <ul className="list-disc list-inside pl-4">
+                            {imageFileNames.map(name => <li key={name} className="truncate">{name}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div> {/* End of added div wrapper */}
                   </FormControl>
                   <FormDescription>
-                    Max {MAX_IMAGES} images. Each up to ${MAX_FILE_SIZE_IMG / (1024*1024)}MB. Accepted: JPG, PNG, GIF, WEBP.
+                    Max {MAX_IMAGES} images. Each up to {MAX_FILE_SIZE_IMG / (1024*1024)}MB. Accepted: JPG, PNG, GIF, WEBP.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -321,3 +324,4 @@ export function ClaimForm() {
     </Card>
   );
 }
+
