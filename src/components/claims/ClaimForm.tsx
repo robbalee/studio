@@ -22,11 +22,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type React from 'react';
 import { useState } from "react";
-import { Loader2, UploadCloud, Image as ImageIcon } from "lucide-react";
+import { Loader2, UploadCloud, Image as ImageIcon, Video } from "lucide-react";
 
 const MAX_FILE_SIZE_DOC = 5 * 1024 * 1024; // 5MB for single document
 const MAX_FILE_SIZE_IMG = 2 * 1024 * 1024; // 2MB for each image
 const MAX_IMAGES = 5;
+const MAX_FILE_SIZE_VIDEO = 10 * 1024 * 1024; // 10MB for single video
 
 const claimFormSchema = z.object({
   claimantName: z.string().min(2, { message: "Claimant name must be at least 2 characters." }),
@@ -39,7 +40,11 @@ const claimFormSchema = z.object({
   images: z.custom<FileList>().optional()
     .refine(files => !files || files.length <= MAX_IMAGES, `You can upload a maximum of ${MAX_IMAGES} images.`)
     .refine(files => !files || Array.from(files).every(file => file.size <= MAX_FILE_SIZE_IMG), `Each image must be ${MAX_FILE_SIZE_IMG / (1024*1024)}MB or less.`)
-    .refine(files => !files || Array.from(files).every(file => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)), "Only JPG, PNG, GIF, WEBP images are allowed.")
+    .refine(files => !files || Array.from(files).every(file => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)), "Only JPG, PNG, GIF, WEBP images are allowed."),
+  video: z.custom<FileList>().optional()
+    .refine(files => !files || files.length <= 1, "Only one video can be uploaded.")
+    .refine(files => !files || !files[0] || files[0].size <= MAX_FILE_SIZE_VIDEO, `Max video file size is ${MAX_FILE_SIZE_VIDEO / (1024*1024)}MB.`)
+    .refine(files => !files || !files[0] || ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'].includes(files[0].type), "Only MP4, WEBM, MOV, AVI, MKV videos are allowed.")
 });
 
 type ClaimFormValues = z.infer<typeof claimFormSchema>;
@@ -51,6 +56,7 @@ export function ClaimForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [docFileName, setDocFileName] = useState<string | null>(null);
   const [imageFileNames, setImageFileNames] = useState<string[]>([]);
+  const [videoFileName, setVideoFileName] = useState<string | null>(null);
 
   const form = useForm<ClaimFormValues>({
     resolver: zodResolver(claimFormSchema),
@@ -77,6 +83,8 @@ export function ClaimForm() {
     let documentName: string | undefined;
     let imageUris: string[] = [];
     let imageNames: string[] = [];
+    let videoUri: string | undefined;
+    let videoName: string | undefined;
 
     if (data.document && data.document.length > 0) {
       const file = data.document[0];
@@ -103,6 +111,19 @@ export function ClaimForm() {
       }
     }
 
+    if (data.video && data.video.length > 0) {
+      const file = data.video[0];
+      videoName = file.name;
+      try {
+        videoUri = await readFileAsDataURL(file);
+      } catch (error) {
+        console.error("Error reading video file:", error);
+        toast({ title: "Error Reading Video", description: "Could not process the uploaded video.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const claimData = {
       claimantName: data.claimantName,
       policyNumber: data.policyNumber,
@@ -112,6 +133,8 @@ export function ClaimForm() {
       documentName,
       imageUris,
       imageNames,
+      videoUri,
+      videoName,
     };
 
     const newClaim = await addClaim(claimData);
@@ -140,7 +163,7 @@ export function ClaimForm() {
     <Card className="max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline">Submit New Insurance Claim</CardTitle>
-        <CardDescription>Please fill in the details below. Attach a main supporting document and up to {MAX_IMAGES} images if necessary.</CardDescription>
+        <CardDescription>Please fill in the details below. Attach supporting documents, images, and a video if necessary.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -205,44 +228,44 @@ export function ClaimForm() {
             <FormField
               control={form.control}
               name="document"
-              render={({ field }) => (
+              render={({ field: { onChange, onBlur, name, ref }}) => (
                 <FormItem>
                   <FormLabel>Supporting Document (Optional)</FormLabel>
                   <FormControl>
-                    <div> {/* Single wrapper div for FormControl */}
-                      <div className="relative">
-                        <Input
-                          id="document-upload"
-                          type="file"
-                          className="hidden"
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
-                          name={field.name}
-                          ref={field.ref}
-                          onBlur={field.onBlur}
-                          onChange={(e) => {
-                            const files = e.target.files;
-                            field.onChange(files);
-                            if (files && files.length > 0) {
-                              setDocFileName(files[0].name);
-                            } else {
-                              setDocFileName(null);
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="document-upload"
-                          className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        >
-                          <span className="flex flex-col items-center space-y-1 text-center">
-                            <UploadCloud className="w-8 h-8 text-muted-foreground" />
-                            <span className="font-medium text-muted-foreground">
-                              {docFileName || "Click to upload main document"}
+                     <div>
+                        <div className="relative">
+                          <Input
+                            id="document-upload"
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip"
+                            name={name}
+                            ref={ref}
+                            onBlur={onBlur}
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              onChange(files); // RHF's onChange
+                              if (files && files.length > 0) {
+                                setDocFileName(files[0].name);
+                              } else {
+                                setDocFileName(null);
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor="document-upload"
+                            className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          >
+                            <span className="flex flex-col items-center space-y-1 text-center">
+                              <UploadCloud className="w-8 h-8 text-muted-foreground" />
+                              <span className="font-medium text-muted-foreground">
+                                {docFileName || "Click to upload main document"}
+                              </span>
+                              {docFileName && <span className="text-xs text-muted-foreground">{docFileName}</span>}
                             </span>
-                             {docFileName && <span className="text-xs text-muted-foreground">{docFileName}</span>}
-                          </span>
-                        </label>
+                          </label>
+                        </div>
                       </div>
-                    </div>
                   </FormControl>
                   <FormDescription>
                     Max file size: {MAX_FILE_SIZE_DOC / (1024*1024)}MB. Accepted: PDF, DOC, DOCX, JPG, PNG, ZIP.
@@ -255,7 +278,7 @@ export function ClaimForm() {
             <FormField
               control={form.control}
               name="images"
-              render={({ field }) => (
+              render={({ field: { onChange, onBlur, name, ref } }) => (
                 <FormItem>
                   <FormLabel>Supporting Images (Optional, up to {MAX_IMAGES})</FormLabel>
                   <FormControl>
@@ -267,12 +290,12 @@ export function ClaimForm() {
                           multiple
                           className="hidden"
                           accept="image/jpeg,image/png,image/gif,image/webp"
-                          name={field.name}
-                          ref={field.ref}
-                          onBlur={field.onBlur}
+                          name={name}
+                          ref={ref}
+                          onBlur={onBlur}
                           onChange={(e) => {
                             const files = e.target.files;
-                            field.onChange(files);
+                            onChange(files); // RHF's onChange
                             if (files && files.length > 0) {
                               setImageFileNames(Array.from(files).map(f => f.name));
                             } else {
@@ -309,6 +332,57 @@ export function ClaimForm() {
                 </FormItem>
               )}
             />
+            
+            <FormField
+              control={form.control}
+              name="video"
+              render={({ field: { onChange, onBlur, name, ref }}) => (
+                <FormItem>
+                  <FormLabel>Supporting Video (Optional)</FormLabel>
+                  <FormControl>
+                     <div>
+                        <div className="relative">
+                          <Input
+                            id="video-upload"
+                            type="file"
+                            className="hidden"
+                            accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska"
+                            name={name}
+                            ref={ref}
+                            onBlur={onBlur}
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              onChange(files); // RHF's onChange
+                              if (files && files.length > 0) {
+                                setVideoFileName(files[0].name);
+                              } else {
+                                setVideoFileName(null);
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor="video-upload"
+                            className="flex items-center justify-center w-full h-32 px-4 transition bg-background border-2 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          >
+                            <span className="flex flex-col items-center space-y-1 text-center">
+                              <Video className="w-8 h-8 text-muted-foreground" />
+                              <span className="font-medium text-muted-foreground">
+                                {videoFileName || "Click to upload video"}
+                              </span>
+                               {videoFileName && <span className="text-xs text-muted-foreground">{videoFileName}</span>}
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                  </FormControl>
+                  <FormDescription>
+                    Max file size: {MAX_FILE_SIZE_VIDEO / (1024*1024)}MB. Accepted: MP4, WEBM, MOV, AVI, MKV.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
 
             <Button type="submit" className="w-full" disabled={totalLoading}>
               {totalLoading ? (

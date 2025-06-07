@@ -15,17 +15,23 @@ const AssessFraudRiskInputSchema = z.object({
   claimDetails: z
     .string()
     .describe('The details of the insurance claim, including all relevant information.'),
-  supportingDocumentUri: z // Renamed from supportingDocuments for clarity
-    .string()
+  supportingDocumentUri: 
+    z.string()
     .describe(
       'The main supporting document for the claim, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     )
     .optional(),
-  imageEvidenceUris: z // New field for multiple images
-    .array(z.string())
+  imageEvidenceUris: 
+    z.array(z.string())
     .optional()
     .describe(
       'An array of image data URIs providing visual evidence for the claim. Each URI must include a MIME type and use Base64 encoding.'
+    ),
+  videoEvidenceUri: z // New field for video
+    .string()
+    .optional()
+    .describe(
+      'A video data URI providing visual evidence for the claim. The URI must include a MIME type and use Base64 encoding.'
     ),
   claimHistory: z.string().describe('The claim history of the claimant.').optional(),
 });
@@ -50,11 +56,11 @@ const prompt = ai.definePrompt({
   output: {schema: AssessFraudRiskOutputSchema},
   prompt: `You are an expert fraud analyst specializing in insurance claims.
 
-  Analyze the provided claim details, supporting document, image evidence, and claim history to assess the risk of fraud.
+  Analyze the provided claim details, supporting document, image evidence, video evidence, and claim history to assess the risk of fraud.
   Provide a risk score between 0 and 1, where 1 indicates the highest risk.
   Highlight any specific fraud indicators or suspicious patterns.
   Provide a summary of your assessment.
-  If image evidence is provided and it influences your assessment, please briefly mention what you observed in the images.
+  If image or video evidence is provided and it influences your assessment, please briefly mention what you observed in the media.
 
   Claim Details: {{{claimDetails}}}
   Supporting Document: {{#if supportingDocumentUri}}{{media url=supportingDocumentUri}}{{else}}None{{/if}}
@@ -63,6 +69,12 @@ const prompt = ai.definePrompt({
     {{#each imageEvidenceUris}}
       Image: {{media url=this}}
     {{/each}}
+  {{else}}
+    None
+  {{/if}}
+  Video Evidence:
+  {{#if videoEvidenceUri}}
+    Video: {{media url=videoEvidenceUri}}
   {{else}}
     None
   {{/if}}
@@ -80,4 +92,3 @@ const assessFraudRiskFlow = ai.defineFlow(
     return output!;
   }
 );
-

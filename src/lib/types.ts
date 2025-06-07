@@ -1,3 +1,4 @@
+
 import type { AssessFraudRiskOutput } from '@/ai/flows/fraud-assessment';
 
 export type ClaimStatus = 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Information Requested';
@@ -12,8 +13,10 @@ export interface Claim {
   documentUri?: string; // Store as data URI
   imageNames?: string[];
   imageUris?: string[]; // Store as data URIs for multiple images
+  videoName?: string;
+  videoUri?: string; // Store as data URI for a single video
   status: ClaimStatus;
-  extractedInfo?: Record<string, string>;
+  extractedInfo?: Record<string, any>; // Value can be string or nested object
   fraudAssessment?: AssessFraudRiskOutput;
   submissionDate: string; // ISO string
   lastUpdatedDate: string; // ISO string

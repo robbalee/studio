@@ -17,6 +17,8 @@ interface NewClaimFormData {
   documentName?: string;
   imageUris?: string[];
   imageNames?: string[];
+  videoUri?: string;
+  videoName?: string;
 }
 
 interface AppContextType {
@@ -41,10 +43,11 @@ const initialClaims: Claim[] = [
     policyNumber: 'POL-12345',
     incidentDate: '2023-10-15',
     incidentDescription: 'Minor fender bender in parking lot. Scratches on rear bumper.',
-    documentName: 'accident_photos.zip', // This was likely a placeholder, as it's a zip not a single doc.
-    // documentUri: 'data:application/zip;base64,UEsDBBQAAAAA...', // Example if it were a real data URI
+    documentName: 'accident_report.pdf',
     imageNames: ['bumper_scratch.jpg', 'overall_damage.jpg'],
-    imageUris: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'], // Placeholder URIs
+    imageUris: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
+    videoName: 'dashcam_clip.mp4',
+    videoUri: 'https://placehold.co/600x400.png', // Placeholder, real would be video data URI
     status: 'Approved',
     submissionDate: new Date('2023-10-16T10:00:00Z').toISOString(),
     lastUpdatedDate: new Date('2023-10-18T14:30:00Z').toISOString(),
@@ -59,36 +62,18 @@ const initialClaims: Claim[] = [
     incidentDate: '2023-11-01',
     incidentDescription: 'Water damage due to burst pipe in kitchen. Affects flooring and cabinets.',
     documentName: 'plumber_report.pdf',
-    // documentUri: 'data:application/pdf;base64,JVBERi0xLjQKJ...', // Example
     status: 'Pending',
     submissionDate: new Date('2023-11-02T09:15:00Z').toISOString(),
     lastUpdatedDate: new Date('2023-11-02T09:15:00Z').toISOString(),
   },
-  {
-    id: 'clm_003',
-    claimantName: 'Charlie Brown',
-    policyNumber: 'POL-24680',
-    incidentDate: '2023-11-05',
-    incidentDescription: 'Stolen laptop from car. Police report filed.',
-    documentName: 'police_report_CHB110523.pdf',
-    // documentUri: 'data:application/pdf;base64,JVBERi0xLjQKJ...', // Example
-    imageNames: ['car_window.jpg'],
-    imageUris: ['https://placehold.co/600x400.png'], // Placeholder URI
-    status: 'Under Review',
-    submissionDate: new Date('2023-11-06T11:00:00Z').toISOString(),
-    lastUpdatedDate: new Date('2023-11-07T16:00:00Z').toISOString(),
-    extractedInfo: { "Item Stolen": "Laptop", "Police Report Number": "CHB110523" },
-    fraudAssessment: { riskScore: 0.6, fraudIndicators: ["High value item", "Frequent claims area"], summary: "Moderate fraud risk, requires further checks." },
-  },
 ];
-
 
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [claims, setClaims] = useState<Claim[]>(initialClaims);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const notificationIdCounter = useRef(0);
-  const claimIdCounter = useRef(initialClaims.length); // Start counter after initial claims
+  const claimIdCounter = useRef(initialClaims.length + 100);
 
 
   const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
@@ -109,7 +94,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const id = `clm_${Date.now().toString()}_${claimIdCounter.current}_${Math.random().toString(36).substring(2, 7)}`;
       const submissionDate = new Date().toISOString();
       
-      let extractedInfo: Record<string, string> | undefined;
+      let extractedInfo: Record<string, any> | undefined;
       if (newClaimData.documentUri && newClaimData.documentName) {
         const docType = newClaimData.documentName.endsWith('.pdf') ? 'PDF Document' : 
                         newClaimData.documentName.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' : 
@@ -142,7 +127,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const assessmentInput = {
           claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(extractedInfo || {})}`,
           supportingDocumentUri: newClaimData.documentUri,
-          imageEvidenceUris: newClaimData.imageUris, // Pass the array of image URIs
+          imageEvidenceUris: newClaimData.imageUris,
+          videoEvidenceUri: newClaimData.videoUri, // Pass video URI
         };
         fraudAssessmentResult = await assessFraudRisk(assessmentInput);
         addNotification({ title: 'Fraud Assessment Complete', message: `Risk score: ${fraudAssessmentResult.riskScore.toFixed(2)} for claim by ${newClaimData.claimantName}.`, type: 'info', claimId: id });
@@ -161,6 +147,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         documentUri: newClaimData.documentUri,
         imageNames: newClaimData.imageNames,
         imageUris: newClaimData.imageUris,
+        videoName: newClaimData.videoName,
+        videoUri: newClaimData.videoUri,
         status: 'Pending',
         submissionDate,
         lastUpdatedDate: submissionDate,

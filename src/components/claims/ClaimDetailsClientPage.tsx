@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, CheckCircle2, Clock, FileText, Loader2, MessageSquare, ShieldAlert, UserCircle, Info, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, FileText, Loader2, MessageSquare, ShieldAlert, UserCircle, Info, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide icon
@@ -101,7 +101,6 @@ export function ClaimDetailsClientPage() {
       riskIcon = <AlertCircle className="h-4 w-4 mr-1 text-yellow-500" />;
     }
   }
-
 
   return (
     <div className="space-y-6">
@@ -230,6 +229,29 @@ export function ClaimDetailsClientPage() {
                 )}
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center"><VideoIcon className="mr-2 h-5 w-5 text-primary" /> Uploaded Video</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {claim.videoUri ? (
+                  <div className="space-y-2">
+                    {claim.videoUri.startsWith('data:video') ? (
+                       <video controls src={claim.videoUri} className="w-full rounded-md border aspect-video">
+                          Your browser does not support the video tag.
+                       </video>
+                    ) : (
+                      <a href={claim.videoUri} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                        {claim.videoName || 'View Video'} (External Link or Placeholder)
+                      </a>
+                    )}
+                     {claim.videoName && <p className="text-sm text-muted-foreground">{claim.videoName}</p>}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic">No video uploaded for this claim.</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
         </CardContent>
@@ -294,4 +316,3 @@ function InfoItem({ icon: Icon, label, value, children, isLongText = false }: In
     </div>
   );
 }
-
