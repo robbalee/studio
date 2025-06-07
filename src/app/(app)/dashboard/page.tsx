@@ -1,8 +1,9 @@
+
 "use client";
 
 import { StatCard } from '@/components/dashboard/StatCard';
 import { useAppContext } from '@/contexts/AppContext';
-import { BarChart, CheckCircle2, AlertTriangle, Clock, FileText, Users } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Clock, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +19,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart"
-import { Bar, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Legend } from "recharts"
 
 
 export default function DashboardPage() {
@@ -73,7 +74,6 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="h-[300px] p-2">
              <ChartContainer config={chartConfig} className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
                   <XAxis dataKey="status" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -84,7 +84,6 @@ export default function DashboardPage() {
                   <Legend content={<ChartLegendContent />} />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
