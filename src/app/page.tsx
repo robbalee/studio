@@ -93,10 +93,8 @@ export default function WelcomePage() {
           </div>
         </section>
         
-        {/* Redundant CTA buttons removed from here */}
-
         {/* Impactful Results Section */}
-        <section className="w-full max-w-5xl mb-16 md:mb-24 mt-8"> {/* Added mt-8 for spacing after removing CTAs */}
+        <section className="w-full max-w-5xl mb-16 md:mb-24 mt-8">
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">Impactful Results with ClaimIntel</h3>
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
             <ImpactStatCard
@@ -107,9 +105,9 @@ export default function WelcomePage() {
             />
             <ImpactStatCard
               icon={<Zap className="h-10 w-10 text-primary" />}
-              value="2 Days Average"
-              title="Claim Resolution Time"
-              description="Streamline your processes from 14 days to just 2, significantly improving operational efficiency and customer satisfaction."
+              value="7x Faster"
+              title="Lightning-Fast Resolutions"
+              description="Slash claim processing times from weeks to days, boosting efficiency and delighting customers."
             />
           </div>
         </section>
