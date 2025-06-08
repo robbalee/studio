@@ -242,7 +242,7 @@ export default function WelcomePage() {
 
       <footer className="text-center py-8 text-muted-foreground text-sm border-t border-border space-y-1">
         <p>&copy; {new Date().getFullYear()} ClaimIntel. All rights reserved.</p>
-        <p>Made with ❤️ from Rainbow Team</p>
+        <p>Made with ❤️ Rainbow Team</p>
         <p>Proudly presented at Hack2Future by LTIMindtree</p>
       </footer>
     </div>
