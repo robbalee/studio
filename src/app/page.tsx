@@ -127,7 +127,7 @@ export default function WelcomePage() {
         </section>
 
         {/* AI-Powered Insights Section */}
-        <section className="w-full max-w-3xl mb-16 md:mb-24"> {/* max-w-3xl for a single centered card */}
+        <section className="w-full max-w-3xl mb-16 md:mb-24">
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">AI-Powered Insights in Action</h3>
           <div className="flex justify-center">
             <Card className="shadow-xl hover:shadow-2xl transition-shadow text-left bg-card/80 backdrop-blur-sm w-full">
@@ -240,8 +240,10 @@ export default function WelcomePage() {
 
       </main>
 
-      <footer className="text-center py-8 text-muted-foreground text-sm border-t border-border">
+      <footer className="text-center py-8 text-muted-foreground text-sm border-t border-border space-y-1">
         <p>&copy; {new Date().getFullYear()} ClaimIntel. All rights reserved.</p>
+        <p>Made with ❤️ from Rainbow Team</p>
+        <p>Proudly presented at Hack2Future by LTIMindtree</p>
       </footer>
     </div>
   );
@@ -330,4 +332,3 @@ function SuccessStoryCard({ quote, story, name }: SuccessStoryCardProps) {
 }
 
     
-
