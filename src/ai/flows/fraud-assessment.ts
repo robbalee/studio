@@ -15,14 +15,17 @@ const AssessFraudRiskInputSchema = z.object({
   claimDetails: z
     .string()
     .describe('The details of the insurance claim, including all relevant information.'),
-  supportingDocumentUri:
-    z.string()
+  supportingDocumentUri: z
+    .string()
     .describe(
-      'The main supporting document for the claim, as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
+      "The main supporting document for the claim, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     )
     .optional(),
-  imageEvidenceUris:
-    z.array(z.string())
+  supportingDocumentName: z.string().optional().describe('The original filename of the main supporting document, if available.'),
+  supportingDocumentType: z.string().optional().describe('The type of the main supporting document (e.g., Claim Form, Invoice, General Document, ZIP Archive).'),
+  isSupportingDocumentDirectlyProcessable: z.boolean().describe('Whether the main supporting document content can be directly processed as media by the AI.'),
+  imageEvidenceUris: z
+    .array(z.string())
     .optional()
     .describe(
       'An array of image data URIs providing visual evidence for the claim. Each URI must include a MIME type and use Base64 encoding.'
@@ -63,7 +66,21 @@ const prompt = ai.definePrompt({
   If image or video evidence is provided and it influences your assessment, please briefly mention what you observed in the media.
 
   Claim Details: {{{claimDetails}}}
-  Supporting Document: {{#if supportingDocumentUri}}{{media url=supportingDocumentUri}}{{else}}None{{/if}}
+
+  Supporting Document:
+  {{#if supportingDocumentUri}}
+    {{#if isSupportingDocumentDirectlyProcessable}}
+      Main Document Content (directly viewable):
+      {{media url=supportingDocumentUri}}
+    {{else}}
+      Main Document (not directly viewable by AI):
+      {{#if supportingDocumentType}}Type: {{{supportingDocumentType}}}{{/if}}{{#if supportingDocumentName}} (Name: {{{supportingDocumentName}}}){{/if}}.
+      [Assess based on its type, name, and other provided claim information. Do not attempt to read its content directly.]
+    {{/if}}
+  {{else}}
+    No main supporting document provided.
+  {{/if}}
+
   Image Evidence:
   {{#if imageEvidenceUris}}
     {{#each imageEvidenceUris}}
@@ -72,12 +89,14 @@ const prompt = ai.definePrompt({
   {{else}}
     None
   {{/if}}
+
   Video Evidence:
   {{#if videoEvidenceUri}}
     Video: {{media url=videoEvidenceUri}}
   {{else}}
     None
   {{/if}}
+
   Claim History: {{#if claimHistory}}{{{claimHistory}}}{{else}}None{{/if}}`,
 });
 

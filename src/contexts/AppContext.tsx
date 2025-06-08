@@ -300,46 +300,41 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsLoading(true); // Use the general isLoading for this operation
     let newClaimId = `clm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     let currentExtractedInfo: Record<string, ExtractedFieldWithOptionalBox> | undefined;
+    let docTypeForProcessing: string | undefined;
+    let isDocDirectlyProcessableForMedia = false;
 
     try {
-      // AI Processing (Document Extraction, Fraud Assessment, Consistency Check) - This part remains the same
+      // Determine document type and processability for both AI flows
       if (newClaimData.documentUri && newClaimData.documentName) {
         const docNameLower = newClaimData.documentName.toLowerCase();
-        const docType = docNameLower.endsWith('.pdf') ? 'PDF Document' :
-                        docNameLower.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' :
-                        docNameLower.endsWith('.zip') ? 'ZIP Archive' : 
-                        (docNameLower.endsWith('.doc') || docNameLower.endsWith('.docx')) ? 'General Document' : // Explicitly 'General Document' for Word
-                        'Other Document'; // Fallback for other types
+        docTypeForProcessing = docNameLower.endsWith('.pdf') ? 'PDF Document' :
+                               docNameLower.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' :
+                               docNameLower.endsWith('.zip') ? 'ZIP Archive' : 
+                               (docNameLower.endsWith('.doc') || docNameLower.endsWith('.docx')) ? 'General Document' :
+                               'Other Document';
         
-        let isDirectlyProcessableMedia = false;
-        let mimeTypeForProcessing = '';
-
         const mimeTypeMatch = newClaimData.documentUri.match(/^data:(.+?);base64,/);
         if (mimeTypeMatch && mimeTypeMatch[1]) {
-          mimeTypeForProcessing = mimeTypeMatch[1];
+          const mimeType = mimeTypeMatch[1];
           const supportedMimeTypesForMediaHelper = [
             'image/jpeg', 'image/png', 'image/webp', 'image/gif',
-            'application/pdf',
-            'text/plain',
-            // Add other MIME types Gemini supports for media if known, e.g., some video types if used with {{media}}
+            'application/pdf', 'text/plain',
           ];
-          if (supportedMimeTypesForMediaHelper.includes(mimeTypeForProcessing)) {
-            isDirectlyProcessableMedia = true;
+          if (supportedMimeTypesForMediaHelper.includes(mimeType)) {
+            isDocDirectlyProcessableForMedia = true;
           }
         }
-        // If it's a docx, doc, or zip based on name, ensure it's not flagged as directly processable
-        // even if its data URI somehow gets a 'text/plain' or other generic MIME type.
-        if (docType === 'General Document' || docType === 'ZIP Archive' || docType === 'Other Document') {
-            isDirectlyProcessableMedia = false;
+        if (docTypeForProcessing === 'General Document' || docTypeForProcessing === 'ZIP Archive' || docTypeForProcessing === 'Other Document') {
+            isDocDirectlyProcessableForMedia = false;
         }
 
-
+        // AI Processing: Document Extraction
         try {
           const extractionResult = await extractDocumentInformation({
             documentDataUri: newClaimData.documentUri,
-            documentType: docType,
+            documentType: docTypeForProcessing,
             documentName: newClaimData.documentName,
-            isDirectlyProcessableMedia: isDirectlyProcessableMedia,
+            isDirectlyProcessableMedia: isDocDirectlyProcessableForMedia,
           });
           if (extractionResult.extractedFieldsJson) {
              try {
@@ -360,13 +355,18 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
       }
 
+      // AI Processing: Fraud Assessment
       let fraudAssessmentResult;
       try {
         const assessmentInput = {
           claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(currentExtractedInfo || {})}`,
           supportingDocumentUri: newClaimData.documentUri,
+          supportingDocumentName: newClaimData.documentName,
+          supportingDocumentType: docTypeForProcessing, // Use the determined docType
+          isSupportingDocumentDirectlyProcessable: isDocDirectlyProcessableForMedia, // Use the determined flag
           imageEvidenceUris: newClaimData.imageUris,
           videoEvidenceUri: newClaimData.videoUri,
+          // claimHistory could be added later if available
         };
         fraudAssessmentResult = await assessFraudRisk(assessmentInput);
         addNotification({ title: 'Fraud Assessment Complete', message: `Risk score: ${fraudAssessmentResult.riskScore.toFixed(2)} for claim by ${newClaimData.claimantName}.`, type: 'info', claimId: newClaimId });
@@ -375,6 +375,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNotification({ title: 'Fraud Assessment Failed', message: `Could not assess fraud risk for ${newClaimData.claimantName}. Details: ${error instanceof Error ? error.message : String(error)}`, type: 'error', claimId: newClaimId });
       }
 
+      // AI Processing: Consistency Check (Simulated)
       let consistencyReport: ConsistencyReport | undefined;
       if (newClaimData.documentUri && currentExtractedInfo && fraudAssessmentResult) {
         const isConsistent = Math.random() > 0.4;
@@ -407,9 +408,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           consistencyReport = { status: 'Not Run', summary: 'Consistency check requires full AI analysis of all related documents. Main document uploaded.', };
       }
 
+      // Firestore Saving
       const now = Timestamp.now();
       const newClaimForDb = {
-        id: newClaimId, // Store id in the document as well for easier reference
+        id: newClaimId,
         claimantName: newClaimData.claimantName,
         policyNumber: newClaimData.policyNumber,
         incidentDate: newClaimData.incidentDate,
@@ -421,8 +423,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         videoName: newClaimData.videoName,
         videoUri: newClaimData.videoUri,
         status: 'Pending' as ClaimStatus,
-        submissionDate: now, // Firestore Timestamp
-        lastUpdatedDate: now, // Firestore Timestamp
+        submissionDate: now,
+        lastUpdatedDate: now,
         extractedInfo: currentExtractedInfo || {},
         fraudAssessment: fraudAssessmentResult,
         consistencyReport: consistencyReport,
@@ -431,7 +433,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       await setDoc(doc(db, "claims", newClaimId), newClaimForDb);
 
-      // Convert ClaimForDb to Claim for local state
       const newClaimForState: Claim = {
         ...newClaimForDb,
         submissionDate: now.toDate().toISOString(),
@@ -571,3 +572,4 @@ export const useAppContext = () => {
   }
   return context;
 };
+
