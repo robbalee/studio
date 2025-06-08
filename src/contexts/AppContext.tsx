@@ -29,7 +29,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     incidentDate: '2024-07-15',
     incidentDescription: 'Minor fender bender in parking lot. Scratches on rear bumper.',
     documentName: 'AccidentReport.pdf',
-    documentUri: `data:text/plain;base64,${btoa(unescape(encodeURIComponent("Claimant: Alice Wonderland. Policy Number: POL-001. Incident Date: 2024-07-15. Document name: AccidentReport.pdf. Original Incident Description: Minor fender bender in parking lot. Scratches on rear bumper.")))}`,
+    documentUri: '', // Will be set by useEffect seed logic
     imageNames: ['damage_front.jpg', 'damage_side.jpg'],
     imageUris: ['https://placehold.co/150x100.png?text=Img1.1', 'https://placehold.co/150x100.png?text=Img1.2'],
     videoName: 'dashcam_footage.mp4',
@@ -59,7 +59,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     incidentDate: '2024-07-18',
     incidentDescription: 'Water damage from burst pipe in kitchen.',
     documentName: 'PlumberInvoice.pdf',
-    documentUri: `data:text/plain;base64,${btoa(unescape(encodeURIComponent("Claimant: Bob The Builder. Policy Number: POL-002. Incident Date: 2024-07-18. Document name: PlumberInvoice.pdf. Original Incident Description: Water damage from burst pipe in kitchen. An extracted invoice total might be around $500.")))}`,
+    documentUri: '', // Will be set by useEffect seed logic
     status: 'Approved',
     extractedInfo: {
       invoiceTotal: { value: "$500", boundingBox: { x: 0.7, y: 0.8, width: 0.15, height: 0.04, page: 1 } },
@@ -77,6 +77,60 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     },
     notes: 'Payment processed.',
   },
+  {
+    claimantName: 'Charles Xavier',
+    policyNumber: 'POL-003',
+    incidentDate: '2024-07-20',
+    incidentDescription: 'Claim for damages to specialized electronic equipment during a power surge. Multiple items affected, detailed list attached.',
+    documentName: 'EquipmentDamageReport.pdf',
+    documentUri: '', // Will be set by useEffect seed logic
+    imageNames: ['damaged_equipment_1.jpg', 'surge_protector.jpg', 'invoice_scan.jpg'],
+    imageUris: ['https://placehold.co/150x100.png?text=Equip1', 'https://placehold.co/150x100.png?text=SurgeP', 'https://placehold.co/150x100.png?text=InvoiceScan'],
+    videoName: 'security_cam_surge.mp4',
+    videoUri: 'https://placehold.co/160x90.png?text=SurgeVid',
+    status: 'Under Review',
+    extractedInfo: {
+      affectedItems: { value: { "item1": { "name": "Custom Server Rack", "damage": "Fried motherboard", "estimatedCost": "$2500" }, "item2": { "name": "Precision Sensor Array", "damage": "Unresponsive", "estimatedCost": "$1800" } }, boundingBox: null },
+      incidentLocation: { value: "Client Office Building A", boundingBox: { x: 0.1, y: 0.15, width: 0.4, height: 0.03, page: 1 } },
+      reportedPowerCompany: { value: "City Electric Co.", boundingBox: null }
+    },
+    fraudAssessment: { riskScore: 0.55, fraudIndicators: ["High value of claimed items", "Previous claim for similar equipment 2 years ago (minor)", "Vague description of surge event details"], summary: "Moderate risk due to high claim value and past history. Documented damage appears consistent with a power surge. Recommend verification of equipment ownership and purchase dates." },
+    consistencyReport: {
+      status: 'Partial',
+      summary: "Policy number matches internal records. Reported incident date consistent with power outage logs in the area. However, specific equipment serial numbers not found in submitted documents for cross-referencing with purchase invoices on file.",
+      details: [
+        { documentA: 'EquipmentDamageReport.pdf', documentB: 'Internal Policy Record', field: 'Policy Number', valueA: 'POL-003', valueB: 'POL-003', finding: 'Match' },
+        { documentA: 'EquipmentDamageReport.pdf', documentB: 'Purchase Invoices (on file)', field: 'Equipment Serial Numbers', valueA: 'Not Provided', valueB: 'SN-XYZ-123, SN-ABC-456', finding: 'Missing in A' }
+      ]
+    },
+    notes: 'Adjuster contacted claimant for serial numbers and proof of purchase.',
+  },
+  {
+    claimantName: 'Diana Prince',
+    policyNumber: 'POL-004',
+    incidentDate: '2024-07-21',
+    incidentDescription: 'Theft of rare artifact from private collection. No forced entry, security system mysteriously offline.',
+    documentName: 'TheftStatement_DP.txt',
+    documentUri: '', // Will be set by useEffect seed logic
+    imageNames: ['empty_display_case.jpg'],
+    imageUris: ['https://placehold.co/150x100.png?text=EmptyCase'],
+    status: 'Rejected',
+    extractedInfo: {
+      claimedItem: { value: "Ancient Amazonian Shield", boundingBox: { x: 0.2, y: 0.3, width: 0.5, height: 0.04, page: 1 } },
+      estimatedValue: { value: "$500,000", boundingBox: { x: 0.2, y: 0.35, width: 0.2, height: 0.04, page: 1 } },
+      securityStatus: { value: "Offline - reason unknown", boundingBox: null }
+    },
+    fraudAssessment: { riskScore: 0.88, fraudIndicators: ["Extremely high value for a single item with limited provenance", "Security system conveniently offline", "No signs of forced entry reported", "Claimant has multiple recent high-value item insurance policies taken out.", "Similar MO to an unsolved case in another jurisdiction."], summary: "High probability of fraud. The circumstances of the alleged theft are highly suspicious and lack credible evidence. Multiple red flags. Recommend immediate rejection and referral to SIU." },
+    consistencyReport: {
+      status: 'Inconsistent',
+      summary: "Significant discrepancies found. The claimed artifact is not listed on the policy schedule. The reported incident date conflicts with travel records showing claimant was out of the country.",
+      details: [
+        { documentA: 'TheftStatement_DP.txt', documentB: 'Policy Schedule POL-004', field: 'Insured Item "Ancient Amazonian Shield"', valueA: 'Claimed', valueB: 'Not Listed', finding: 'Mismatch' },
+        { documentA: 'TheftStatement_DP.txt', documentB: 'Travel Records (External System)', field: 'Claimant Location on Incident Date', valueA: 'At Residence', valueB: 'Overseas (Themyscira)', finding: 'Mismatch' }
+      ]
+    },
+    notes: 'Claim rejected due to strong evidence of misrepresentation and potential fraud. Referred to Special Investigations Unit.',
+  }
 ];
 
 const initialNotifications: AppNotification[] = [
@@ -142,19 +196,35 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (querySnapshot.empty) {
           // One-time seed if Firestore collection is empty
           const batch = writeBatch(db);
-          const seededClaimIds = ['clm_1749303123456_abc', 'clm_1749303123789_def']; // Use specific IDs for seeded claims for consistency with notifications
+          // Ensure these IDs are unique and consistent for initial seed
+          const seededClaimIds = [
+            'clm_1749303123456_abc', 
+            'clm_1749303123789_def',
+            'clm_1749303300000_ghi',
+            'clm_1749303400000_jkl'
+          ];
 
           initialClaimsSeed.forEach((claimData, index) => {
-            const claimId = seededClaimIds[index] || `clm_seed_${Date.now()}_${index}`;
+            const claimId = seededClaimIds[index] || `clm_seed_${Date.now()}_${index}`; // Fallback if arrays mismatch
             const docRef = doc(db, "claims", claimId);
             const now = Timestamp.now();
-            const submissionDate = claimData.status === 'Pending' ? now : Timestamp.fromDate(new Date(Date.now() - (2-index) * 24 * 60 * 60 * 1000)); // Earlier for approved
-            const lastUpdatedDate = claimData.status === 'Pending' ? submissionDate : Timestamp.fromDate(new Date(submissionDate.toDate().getTime() + 12 * 60 * 60 * 1000));
+            // Stagger submission dates for seeded claims to make the list more realistic
+            const submissionDate = Timestamp.fromDate(new Date(Date.now() - (initialClaimsSeed.length - 1 - index) * 24 * 60 * 60 * 1000 * 2)); // Spread over a few days
+            const lastUpdatedDate = claimData.status !== 'Pending' ? 
+                                     Timestamp.fromDate(new Date(submissionDate.toDate().getTime() + (Math.random() * 24 + 12) * 60 * 60 * 1000)) : // Random update within 12-36 hrs for non-pending
+                                     submissionDate;
 
-
+            // Create a more descriptive plain text data URI for Q&A if documentUri is empty
+            let finalDocumentUri = claimData.documentUri;
+            if (!finalDocumentUri && claimData.documentName) {
+                 const textContent = `Document: ${claimData.documentName}\nClaimant: ${claimData.claimantName}\nPolicy Number: ${claimData.policyNumber}\nIncident Date: ${claimData.incidentDate}\nDescription: ${claimData.incidentDescription}\nExtracted Info Sample: ${JSON.stringify(Object.keys(claimData.extractedInfo || {}).slice(0,2).reduce((acc, key) => { acc[key] = (claimData.extractedInfo as any)[key].value; return acc; }, {} as any))}`;
+                 finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
+            }
+            
             batch.set(docRef, {
               ...claimData,
               id: claimId,
+              documentUri: finalDocumentUri,
               submissionDate: submissionDate,
               lastUpdatedDate: lastUpdatedDate,
             });
@@ -178,9 +248,17 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         } else {
           const fetchedClaims = querySnapshot.docs.map(doc => {
             const data = doc.data();
+            // Ensure documentUri is present and correct from Firestore
+             let finalDocumentUri = data.documentUri;
+             if (!finalDocumentUri && data.documentName) { // Fallback if URI was somehow not set but doc name exists
+                const textContent = `Document: ${data.documentName}\nClaimant: ${data.claimantName}\nPolicy Number: ${data.policyNumber}\nIncident Date: ${data.incidentDate}\nDescription: ${data.incidentDescription}`;
+                finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
+             }
+
             return {
               ...data,
               id: doc.id,
+              documentUri: finalDocumentUri,
               submissionDate: (data.submissionDate as Timestamp)?.toDate().toISOString(),
               lastUpdatedDate: (data.lastUpdatedDate as Timestamp)?.toDate().toISOString(),
             } as Claim;
@@ -189,9 +267,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
       } catch (error) {
         console.error("Error fetching or seeding claims from Firestore:", error);
-        addNotification({ title: "Database Error", message: "Could not load claims data. Using local fallback (if any).", type: "error" });
-        // Optionally, fall back to local initial claims if Firestore fails entirely (though seeding is preferred)
-        // setClaims(initialClaimsSeed.map((c,i) => ({...c, id: `local_${i}`, submissionDate: new Date().toISOString(), lastUpdatedDate: new Date().toISOString()} as Claim)));
+        addNotification({ title: "Database Error", message: `Could not load claims data. Details: ${error instanceof Error ? error.message : String(error)}`, type: "error" });
       } finally {
         setIsLoading(false);
       }
@@ -463,4 +539,6 @@ export const useAppContext = () => {
   }
   return context;
 };
+    
+
     
