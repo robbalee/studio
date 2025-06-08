@@ -1,5 +1,4 @@
 
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, Smartphone, Zap, CheckCircle2, Quote, Star, Car, Camera, Video, FileUp, BrainCircuit, ArrowRight, BrainCog, SearchCheck, Sparkles, User, Users, Home, PlaneTakeoff, Edit, ShieldX } from 'lucide-react';
@@ -49,7 +48,7 @@ export default function WelcomePage() {
           <Button asChild variant="outline">
             <Link href="/admin">
               <BrainCog className="mr-2 h-4 w-4" />
-              AI Reports
+              Admin Portal
             </Link>
           </Button>
           <Button asChild>
@@ -94,21 +93,10 @@ export default function WelcomePage() {
           </div>
         </section>
         
-        <div className="flex flex-col sm:flex-row gap-4 mb-16 md:mb-24">
-          <Button size="lg" asChild className="shadow-lg hover:shadow-xl transition-shadow">
-            <Link href="/claims/new">
-              <User className="mr-2 h-5 w-5" /> For Claimants: Start a New Claim
-            </Link>
-          </Button>
-          <Button size="lg" variant="outline" asChild className="shadow-lg hover:shadow-xl transition-shadow">
-            <Link href="/admin">
-              <Users className="mr-2 h-5 w-5" /> For Insurers: Access Admin Portal
-            </Link>
-          </Button>
-        </div>
+        {/* Redundant CTA buttons removed from here */}
 
         {/* Impactful Results Section */}
-        <section className="w-full max-w-5xl mb-16 md:mb-24">
+        <section className="w-full max-w-5xl mb-16 md:mb-24 mt-8"> {/* Added mt-8 for spacing after removing CTAs */}
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">Impactful Results with ClaimIntel</h3>
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
             <ImpactStatCard
@@ -170,8 +158,6 @@ export default function WelcomePage() {
                   <h4 className="font-semibold text-foreground/90 mb-1">Consistency Check:</h4>
                    <p className="text-muted-foreground text-xs">Status: <span className="text-accent font-semibold">Consistent</span>. All key data points align across submitted documents and available internal records.</p>
                 </div>
-
-
               </CardContent>
               <CardFooter>
                 <p className="text-sm font-semibold text-primary">AI Recommendation: Expedite for Approval</p>
@@ -323,12 +309,10 @@ function SuccessStoryCard({ quote, story, name }: SuccessStoryCardProps) {
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">{story}</p>
         <div className="flex items-center gap-3 pt-2">
-          {/* Profile image removed */}
           <p className="text-sm font-semibold text-foreground">{name}</p>
         </div>
       </CardContent>
     </Card>
   );
 }
-
     
