@@ -50,7 +50,7 @@ const claimFormSchema = z.object({
 type ClaimFormValues = z.infer<typeof claimFormSchema>;
 
 export function ClaimForm() {
-  const { addClaim, isLoading: isContextLoading } = useAppContext();
+  const { addClaim } = useAppContext(); // Removed isContextLoading from here
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,7 +95,7 @@ export function ClaimForm() {
         } catch (error) {
           console.error("Error reading document file:", error);
           toast({ title: "Error Reading Document", description: "Could not process the uploaded document.", variant: "destructive" });
-          throw error;
+          throw error; // Re-throw to be caught by the outer catch
         }
       }
 
@@ -106,7 +106,7 @@ export function ClaimForm() {
         } catch (error) {
           console.error("Error reading image files:", error);
           toast({ title: "Error Reading Images", description: "Could not process one or more uploaded images.", variant: "destructive" });
-          throw error;
+          throw error; // Re-throw
         }
       }
 
@@ -118,7 +118,7 @@ export function ClaimForm() {
         } catch (error) {
           console.error("Error reading video file:", error);
           toast({ title: "Error Reading Video", description: "Could not process the uploaded video.", variant: "destructive" });
-          throw error;
+          throw error; // Re-throw
         }
       }
 
@@ -146,15 +146,21 @@ export function ClaimForm() {
         });
         router.push(`/claims/${newClaim.id}`);
       } else {
+        // addClaim in AppContext should handle its own error notifications
+        // This else might be hit if addClaim returns null without throwing an error handled there.
         toast({
-          title: "Error Submitting Claim",
-          description: "There was a problem submitting your claim. Please check notifications for details or try again.",
+          title: "Claim Submission Problem",
+          description: "The claim submission process did not complete as expected. Please check notifications or try again.",
           variant: "destructive",
         });
       }
     } catch (formError) {
       console.error("Error in claim form submission process:", formError);
-      if (!toast.toasts.find(t => ["Error Reading Document", "Error Reading Images", "Error Reading Video"].includes(t.title as string))) {
+      // Avoid duplicate toasts if already handled by file reading
+      const fileErrorToastExists = toast.toasts.some(t => 
+        ["Error Reading Document", "Error Reading Images", "Error Reading Video"].includes(t.title as string)
+      );
+      if (!fileErrorToastExists) {
          toast({
             title: "Form Processing Error",
             description: "An unexpected error occurred while preparing your claim. Please try again.",
@@ -165,15 +171,7 @@ export function ClaimForm() {
       setIsSubmitting(false);
     }
   }
-
-  const totalLoading = isSubmitting || isContextLoading;
-  let buttonText = "Submit Claim";
-  if (isSubmitting) {
-    buttonText = "Submitting...";
-  } else if (isContextLoading) {
-    buttonText = "Loading...";
-  }
-
+  
   return (
     <Card className="max-w-2xl mx-auto shadow-lg">
       <CardHeader>
@@ -398,11 +396,11 @@ export function ClaimForm() {
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={totalLoading}>
-              {totalLoading ? (
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {buttonText}
+                  Submitting...
                 </>
               ) : (
                 "Submit Claim"
