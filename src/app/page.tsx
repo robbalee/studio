@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2, Quote, Star, Car, Camera, Video, FileUp, BrainCircuit, ArrowRight, BrainCog, SearchCheck, Sparkles } from 'lucide-react';
+import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2, Quote, Star, Car, Camera, Video, FileUp, BrainCircuit, ArrowRight, BrainCog, SearchCheck, Sparkles, User, Users } from 'lucide-react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 
@@ -21,7 +21,10 @@ export default function WelcomePage() {
             </Link>
           </Button>
           <Button asChild>
-            <Link href="/dashboard">Dashboard</Link>
+            <Link href="/claims">
+              <User className="mr-2 h-4 w-4" />
+              My Claims
+            </Link>
           </Button>
         </div>
       </header>
@@ -63,9 +66,19 @@ export default function WelcomePage() {
             />
           </div>
         </div>
-        <Button size="lg" asChild className="shadow-lg hover:shadow-xl transition-shadow mb-16 md:mb-24">
-          <Link href="/dashboard">Get Started</Link>
-        </Button>
+        
+        <div className="flex flex-col sm:flex-row gap-4 mb-16 md:mb-24">
+          <Button size="lg" asChild className="shadow-lg hover:shadow-xl transition-shadow">
+            <Link href="/claims">
+              <User className="mr-2 h-5 w-5" /> For Claimants: File or View Claims
+            </Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild className="shadow-lg hover:shadow-xl transition-shadow">
+            <Link href="/admin">
+              <Users className="mr-2 h-5 w-5" /> For Insurers: Access Admin Portal
+            </Link>
+          </Button>
+        </div>
 
         {/* Impactful Results Section */}
         <section className="w-full max-w-5xl mb-16 md:mb-24">
@@ -86,7 +99,7 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        {/* AI-Powered Insights Section (Moved here) */}
+        {/* AI-Powered Insights Section */}
         <section className="w-full max-w-5xl mb-16 md:mb-24">
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">AI-Powered Insights in Action</h3>
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8 items-start">
@@ -142,7 +155,7 @@ export default function WelcomePage() {
           </div>
         </section>
         
-        {/* Customer Success Stories Section (Moved here) */}
+        {/* Customer Success Stories Section */}
         <section className="w-full max-w-5xl py-12 md:py-16">
           <h3 className="text-3xl font-bold font-headline text-foreground mb-12 text-center">
             Real Stories, Real Relief
@@ -165,7 +178,7 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        {/* How It Works Section (Moved here) */}
+        {/* How It Works Section */}
         <section className="w-full max-w-6xl mb-16 md:mb-24">
           <h3 className="text-3xl font-bold font-headline text-foreground mb-12 text-center">
             From Incident to Insight: Your ClaimIntel Journey
@@ -321,3 +334,4 @@ function SuccessStoryCard({ quote, story, name, imageSrc, imageHint }: SuccessSt
     </Card>
   );
 }
+
