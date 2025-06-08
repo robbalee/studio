@@ -28,7 +28,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     incidentDate: '2024-07-15',
     incidentDescription: 'Minor fender bender in parking lot. Scratches on rear bumper.',
     documentName: 'AccidentReport.pdf',
-    documentUri: '', 
+    documentUri: '',
     imageNames: ['damage_front.jpg', 'damage_side.jpg'],
     imageUris: ['https://placehold.co/150x100.png?text=Img1.1', 'https://placehold.co/150x100.png?text=Img1.2'],
     videoName: 'dashcam_footage.mp4',
@@ -57,7 +57,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     incidentDate: '2024-07-18',
     incidentDescription: 'Water damage from burst pipe in kitchen.',
     documentName: 'PlumberInvoice.pdf',
-    documentUri: '', 
+    documentUri: '',
     status: 'Approved',
     extractedInfo: {
       invoiceTotal: { value: "$500", boundingBox: { x: 0.7, y: 0.8, width: 0.15, height: 0.04, page: 1 } },
@@ -81,7 +81,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     incidentDate: '2024-07-20',
     incidentDescription: 'Claim for damages to specialized electronic equipment during a power surge. Multiple items affected, detailed list attached.',
     documentName: 'EquipmentDamageReport.docx',
-    documentUri: '', 
+    documentUri: '',
     imageNames: ['damaged_equipment_1.jpg', 'surge_protector.jpg', 'invoice_scan.jpg'],
     imageUris: ['https://placehold.co/150x100.png?text=Equip1', 'https://placehold.co/150x100.png?text=SurgeP', 'https://placehold.co/150x100.png?text=InvoiceScan'],
     videoName: 'security_cam_surge.mp4',
@@ -109,7 +109,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     incidentDate: '2024-07-21',
     incidentDescription: 'Theft of rare artifact from private collection. No forced entry, security system mysteriously offline.',
     documentName: 'TheftStatement_DP.zip',
-    documentUri: '', 
+    documentUri: '',
     imageNames: ['empty_display_case.jpg'],
     imageUris: ['https://placehold.co/150x100.png?text=EmptyCase'],
     status: 'Rejected',
@@ -159,8 +159,8 @@ interface AppContextType {
   addNotification: (notification: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
   clearNotifications: () => void;
-  isLoading: boolean; 
-  isContextLoading: boolean; 
+  isLoading: boolean;
+  isContextLoading: boolean;
   isKycVerifiedForSession: boolean;
   completeKycSession: () => void;
   resetKycSession: () => void;
@@ -172,13 +172,12 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Default objects for AI-derived fields to prevent Firestore 'undefined' errors
 const defaultExtractedInfo: Record<string, ExtractedFieldWithOptionalBox> = {
   processingStatus: { value: "Extraction not performed, failed, or no document provided." }
 };
 
 const defaultFraudAssessment: AssessFraudRiskOutput = {
-  riskScore: 0, // Neutral/default score
+  riskScore: 0,
   fraudIndicators: ["Assessment Not Performed"],
   summary: "Fraud assessment was not performed or encountered an error."
 };
@@ -192,7 +191,7 @@ const defaultConsistencyReport: ConsistencyReport = {
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [isLoading, setIsLoading] = useState(true);
   const [isKycVerifiedForSession, setIsKycVerifiedForSession] = useState(false);
   const notificationIdCounter = useRef(initialNotifications.length);
 
@@ -210,19 +209,18 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (querySnapshot.empty) {
           const batch = writeBatch(db);
           const seededClaimIds = [
-            'clm_1749303123456_abc', 
+            'clm_1749303123456_abc',
             'clm_1749303123789_def',
             'clm_1749303300000_ghi',
             'clm_1749303400000_jkl'
           ];
 
           initialClaimsSeed.forEach((claimData, index) => {
-            const claimId = seededClaimIds[index] || `clm_seed_${Date.now()}_${index}`; 
+            const claimId = seededClaimIds[index] || `clm_seed_${Date.now()}_${index}`;
             const docRef = doc(db, "claims", claimId);
-            const now = Timestamp.now();
-            const submissionDate = Timestamp.fromDate(new Date(Date.now() - (initialClaimsSeed.length - 1 - index) * 24 * 60 * 60 * 1000 * 2)); 
-            const lastUpdatedDate = claimData.status !== 'Pending' ? 
-                                     Timestamp.fromDate(new Date(submissionDate.toDate().getTime() + (Math.random() * 24 + 12) * 60 * 60 * 1000)) : 
+            const submissionDate = Timestamp.fromDate(new Date(Date.now() - (initialClaimsSeed.length - 1 - index) * 24 * 60 * 60 * 1000 * 2));
+            const lastUpdatedDate = claimData.status !== 'Pending' ?
+                                     Timestamp.fromDate(new Date(submissionDate.toDate().getTime() + (Math.random() * 24 + 12) * 60 * 60 * 1000)) :
                                      submissionDate;
 
             let finalDocumentUri = claimData.documentUri;
@@ -233,7 +231,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                  const textContent = `Document Name: ${claimData.documentName}\nDocument Type: ${documentNameLower.endsWith('.pdf') ? 'PDF Document' : documentNameLower.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' : documentNameLower.endsWith('.zip') ? 'ZIP Archive' : 'General Document'}\nClaimant: ${claimData.claimantName}\nPolicy Number: ${claimData.policyNumber}\nIncident Date: ${claimData.incidentDate}\nDescription: ${claimData.incidentDescription}\nExtracted Info Sample (if any): ${JSON.stringify(Object.keys(claimData.extractedInfo || {}).slice(0,2).reduce((acc, key) => { acc[key] = (claimData.extractedInfo as any)[key].value; return acc; }, {} as any))}`;
                  finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
             }
-            
+
             batch.set(docRef, {
               ...claimData,
               id: claimId,
@@ -260,7 +258,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const fetchedClaims = querySnapshot.docs.map(doc => {
             const data = doc.data();
              let finalDocumentUri = data.documentUri;
-             if (!finalDocumentUri && data.documentName) { 
+             if (!finalDocumentUri && data.documentName) {
                 const textContent = `Document: ${data.documentName}\nClaimant: ${data.claimantName}\nPolicy Number: ${data.policyNumber}\nIncident Date: ${data.incidentDate}\nDescription: ${data.incidentDescription}`;
                 finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
              }
@@ -285,7 +283,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     fetchAndSeedClaims();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
 
   const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
@@ -304,25 +302,27 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const addClaim = useCallback(async (newClaimData: NewClaimFormData): Promise<Claim | null> => {
+    console.log("addClaim: Started");
     setIsLoading(true);
     let newClaimId = `clm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    
+
     let currentExtractedInfoResult: Record<string, ExtractedFieldWithOptionalBox> = { ...defaultExtractedInfo };
     let fraudAssessmentResult: AssessFraudRiskOutput = { ...defaultFraudAssessment };
     let consistencyReportResult: ConsistencyReport = { ...defaultConsistencyReport };
-    
+
     let docTypeForProcessing: string | undefined;
     let isDocDirectlyProcessableForMedia = false;
 
-    try { // Main try block for the entire claim processing
+    try {
+      console.log("addClaim: Main try block entered");
       if (newClaimData.documentUri && newClaimData.documentName) {
         const docNameLower = newClaimData.documentName.toLowerCase();
         docTypeForProcessing = docNameLower.endsWith('.pdf') ? 'PDF Document' :
                                docNameLower.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' :
-                               docNameLower.endsWith('.zip') ? 'ZIP Archive' : 
+                               docNameLower.endsWith('.zip') ? 'ZIP Archive' :
                                (docNameLower.endsWith('.doc') || docNameLower.endsWith('.docx')) ? 'General Document' :
                                'Other Document';
-        
+
         const mimeTypeMatch = newClaimData.documentUri.match(/^data:(.+?);base64,/);
         if (mimeTypeMatch && mimeTypeMatch[1]) {
           const mimeType = mimeTypeMatch[1];
@@ -337,14 +337,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (docTypeForProcessing === 'General Document' || docTypeForProcessing === 'ZIP Archive' || docTypeForProcessing === 'Other Document') {
             isDocDirectlyProcessableForMedia = false;
         }
-
+        console.log(`addClaim: Document type: ${docTypeForProcessing}, Directly processable: ${isDocDirectlyProcessableForMedia}`);
         try {
+          console.log("addClaim: Before extractDocumentInformation call");
           const extractionOutput = await extractDocumentInformation({
             documentDataUri: newClaimData.documentUri,
             documentType: docTypeForProcessing,
             documentName: newClaimData.documentName,
             isDirectlyProcessableMedia: isDocDirectlyProcessableForMedia,
           });
+          console.log("addClaim: After extractDocumentInformation call", extractionOutput);
           if (extractionOutput.extractedFieldsJson) {
              try {
                 const parsedJson = JSON.parse(extractionOutput.extractedFieldsJson);
@@ -359,8 +361,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
              addNotification({ title: 'Document Processing Skipped', message: `No information extracted from ${newClaimData.documentName}.`, type: 'info', claimId: newClaimId });
           }
         } catch (error) {
-          console.error("Error processing document with AI:", error);
+          console.error("Error processing document with AI (extractDocumentInformation):", error);
           addNotification({ title: 'Document Processing Failed', message: `AI could not extract info from ${newClaimData.documentName}. Details: ${error instanceof Error ? error.message : String(error)}`, type: 'error', claimId: newClaimId });
+          // currentExtractedInfoResult remains default
         }
       }
 
@@ -374,26 +377,31 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           imageEvidenceUris: newClaimData.imageUris,
           videoEvidenceUri: newClaimData.videoUri,
         };
+        console.log("addClaim: Before assessFraudRisk call", assessmentInput);
         const aiOutput = await assessFraudRisk(assessmentInput);
+        console.log("addClaim: After assessFraudRisk call", aiOutput);
         if (aiOutput) {
             fraudAssessmentResult = aiOutput;
             addNotification({ title: 'Fraud Assessment Complete', message: `Risk score: ${fraudAssessmentResult.riskScore.toFixed(2)} for claim by ${newClaimData.claimantName}.`, type: 'info', claimId: newClaimId });
         } else {
             addNotification({ title: 'Fraud Assessment Incomplete', message: `AI returned no data for fraud assessment of ${newClaimData.claimantName}'s claim.`, type: 'warning', claimId: newClaimId });
+            // fraudAssessmentResult remains default
         }
       } catch (error) {
-        console.error("Error assessing fraud risk:", error);
+        console.error("Error assessing fraud risk (assessFraudRisk):", error);
         addNotification({ title: 'Fraud Assessment Failed', message: `Could not assess fraud risk for ${newClaimData.claimantName}. Details: ${error instanceof Error ? error.message : String(error)}`, type: 'error', claimId: newClaimId });
+        // fraudAssessmentResult remains default
       }
 
-      if (newClaimData.documentUri && currentExtractedInfoResult && fraudAssessmentResult) {
+      console.log("addClaim: Simulating consistency report");
+      if (newClaimData.documentUri && currentExtractedInfoResult !== defaultExtractedInfo && fraudAssessmentResult !== defaultFraudAssessment) {
         const isConsistent = Math.random() > 0.4;
         const primaryDocName = newClaimData.documentName || "Submitted Claim Document";
         const secondaryDocTypes = ["Police Report (on file)", "Witness Statement (on file)", "Internal System Record"];
         const secondaryDocName = secondaryDocTypes[Math.floor(Math.random() * secondaryDocTypes.length)];
         const commonFields = ["Incident Date", "Claimant Name", "Policy Number"];
         const fieldForComparison = commonFields[Math.floor(Math.random() * commonFields.length)];
-        
+
         const getExtractedValue = (fieldName: string) => {
             const key = Object.keys(currentExtractedInfoResult || {}).find(k => k.toLowerCase().replace(/\s/g, '') === fieldName.toLowerCase().replace(/\s/g, ''));
             return key ? String((currentExtractedInfoResult?.[key] as ExtractedFieldWithOptionalBox)?.value || "N/A") : String(newClaimData[fieldName.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "N/A");
@@ -415,6 +423,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNotification({ title: 'Consistency Check Simulated', message: `Consistency: ${consistencyReportResult.status} for ${newClaimData.claimantName}'s claim.`, type: 'info', claimId: newClaimId });
       } else if (newClaimData.documentUri) {
           consistencyReportResult = { ...defaultConsistencyReport, status: 'Not Run', summary: 'Consistency check requires full AI analysis of all related documents. Main document uploaded.' };
+      } else {
+          consistencyReportResult = { ...defaultConsistencyReport, status: 'Not Run', summary: 'No document uploaded; consistency check not performed.' };
       }
 
       const now = Timestamp.now();
@@ -433,31 +443,34 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         status: 'Pending' as ClaimStatus,
         submissionDate: now,
         lastUpdatedDate: now,
-        extractedInfo: currentExtractedInfoResult, // Already defaulted at declaration or within blocks
-        fraudAssessment: fraudAssessmentResult, // Already defaulted at declaration or within blocks
-        consistencyReport: consistencyReportResult, // Already defaulted at declaration or within blocks
+        extractedInfo: currentExtractedInfoResult,
+        fraudAssessment: fraudAssessmentResult,
+        consistencyReport: consistencyReportResult,
         notes: '',
       };
-
+      console.log("addClaim: Before Firestore setDoc", newClaimForDb);
       await setDoc(doc(db, "claims", newClaimId), newClaimForDb);
+      console.log("addClaim: After Firestore setDoc");
 
       const newClaimForState: Claim = {
         ...newClaimForDb,
         submissionDate: now.toDate().toISOString(),
         lastUpdatedDate: now.toDate().toISOString(),
       };
-      
+
       setClaims(prevClaims => [newClaimForState, ...prevClaims].sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime()));
       addNotification({ title: 'Claim Submitted to DB', message: `New claim #${newClaimForState.id.substring(0,12)}... by ${newClaimForState.claimantName} saved.`, type: 'success', claimId: newClaimForState.id });
       resetKycSession();
+      console.log("addClaim: Successfully processed and returned claim", newClaimForState.id);
       return newClaimForState;
 
     } catch (error) {
-      console.error("Error adding claim to Firestore or during AI processing:", error);
+      console.error("addClaim: Error in main try block:", error);
       addNotification({ title: 'Claim Submission Failed', message: `There was an error saving the claim or processing AI tasks. Details: ${error instanceof Error ? error.message : String(error)}`, type: 'error', claimId: newClaimId });
       return null;
     } finally {
-      setIsLoading(false); // This will always be called
+      console.log("addClaim: Main finally block reached. Setting isLoading to false.");
+      setIsLoading(false);
     }
   }, [addNotification, resetKycSession]);
 
@@ -557,8 +570,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNotification,
         markNotificationAsRead,
         clearNotifications,
-        isLoading: isLoading, 
-        isContextLoading: isLoading, 
+        isLoading: isLoading,
+        isContextLoading: isLoading,
         isKycVerifiedForSession,
         completeKycSession,
         resetKycSession,
