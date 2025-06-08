@@ -213,10 +213,10 @@ export default function AdminReportsPage() {
           </Accordion>
         ) : (
           <div className="flex flex-col items-center justify-center text-center py-12">
-            <Image src="https://placehold.co/300x200.png" alt="No claims for AI reports" width={200} height={133} data-ai-hint="empty state chart analytics" className="mb-6 rounded-lg" />
-            <h3 className="text-xl font-semibold text-foreground mb-3">No AI Reports Available</h3>
+            <Image src="https://placehold.co/400x250.png" alt="No AI Reports to Display Yet" width={300} height={188} data-ai-hint="empty state document list" className="mb-6 rounded-lg" />
+            <h3 className="text-xl font-semibold text-foreground mb-3">No AI Reports to Display Yet</h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              When claims are processed by AI, their reports will appear here. Try submitting a new claim.
+              As claims are submitted and processed by our AI, their detailed reports will populate this dashboard. Submit a new claim to see the insights!
             </p>
           </div>
         )}
@@ -224,3 +224,4 @@ export default function AdminReportsPage() {
     </Card>
   );
 }
+
