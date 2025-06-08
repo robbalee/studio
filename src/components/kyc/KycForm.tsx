@@ -63,7 +63,7 @@ export function KycForm() {
       title: "KYC Verification Successful (Demo)",
       description: "You can now proceed to submit your claim.",
       variant: "default",
-      className: "bg-accent text-accent-foreground",
+      className: "bg-accent text-accent-foreground", // Ensure success styling for the toast
     });
   }
 
