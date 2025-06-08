@@ -126,56 +126,56 @@ export default function WelcomePage() {
         </section>
 
         {/* AI-Powered Insights Section */}
-        <section className="w-full max-w-5xl mb-16 md:mb-24">
+        <section className="w-full max-w-3xl mb-16 md:mb-24"> {/* max-w-3xl for a single centered card */}
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">AI-Powered Insights in Action</h3>
-          <div className="grid md:grid-cols-2 gap-6 lg:gap-8 items-start">
-            <Card className="shadow-xl hover:shadow-2xl transition-shadow text-left bg-card/80 backdrop-blur-sm">
+          <div className="flex justify-center">
+            <Card className="shadow-xl hover:shadow-2xl transition-shadow text-left bg-card/80 backdrop-blur-sm w-full">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
-                  <BrainCog className="mr-2 h-6 w-6 text-primary" />
-                  Sample AI Analysis Report
+                  <BrainCog className="mr-3 h-7 w-7 text-primary" />
+                  Automated Claim Analysis Report
                 </CardTitle>
-                <CardDescription>Illustrating clarity and actionable intelligence.</CardDescription>
+                <CardDescription>Illustrating clarity and actionable intelligence provided by ClaimIntel.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+              <CardContent className="space-y-4 text-sm">
                 <p><span className="font-semibold text-foreground/90">Claim ID:</span> <span className="text-muted-foreground">CL-98765B</span></p>
-                <div className="flex items-center">
-                  <span className="font-semibold text-foreground/90 mr-2">Fraud Risk:</span>
-                  <span className="text-accent font-bold flex items-center">
-                    <CheckCircle2 className="mr-1 h-4 w-4" /> Low (0.08)
-                  </span>
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground/90 mb-1">Key Extracted Insights:</p>
-                  <ul className="list-disc list-inside pl-4 text-muted-foreground space-y-0.5">
-                    <li>Policy status: Active & Verified</li>
-                    <li>Incident date: Consistent with report</li>
-                    <li>Damage description: Aligns with uploaded media</li>
-                    <li>Prior claim history: None relevant</li>
+                
+                <div className="p-3 rounded-md bg-background/50 border">
+                  <h4 className="font-semibold text-foreground/90 mb-1">Fraud Risk Assessment:</h4>
+                  <div className="flex items-center mb-1">
+                    <span className="font-medium text-foreground/80 mr-2">Overall Risk:</span>
+                    <span className="text-accent font-bold flex items-center">
+                      <CheckCircle2 className="mr-1 h-4 w-4" /> Low (0.08)
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground text-xs italic">Summary: Minimal risk indicators detected. Information appears consistent across provided documents and claim history. Standard verification checks passed.</p>
+                  <p className="font-medium text-foreground/80 mt-2 mb-0.5 text-xs">Fraud Indicators (if any):</p>
+                  <ul className="list-disc list-inside pl-4 text-muted-foreground text-xs space-y-0.5">
+                    <li>None significant.</li>
                   </ul>
                 </div>
-                <p className="italic text-muted-foreground/80">"Summary: Minimal risk indicators. Information is consistent across provided documents and claim history. Standard checks passed."</p>
+
+                <div className="p-3 rounded-md bg-background/50 border">
+                  <h4 className="font-semibold text-foreground/90 mb-1">Key Extracted Insights (from documents):</h4>
+                  <ul className="list-disc list-inside pl-4 text-muted-foreground space-y-1 text-xs">
+                    <li><span className="font-medium text-foreground/80">Policy Status:</span> Active & Verified</li>
+                    <li><span className="font-medium text-foreground/80">Incident Date (Claim Form):</span> Consistent with Police Report</li>
+                    <li><span className="font-medium text-foreground/80">Damage Description:</span> Aligns with uploaded photographic media</li>
+                    <li><span className="font-medium text-foreground/80">Prior Claim History:</span> None relevant to this incident</li>
+                    <li><span className="font-medium text-foreground/80">Invoice Total (Repair Quote):</span> $450.75</li>
+                  </ul>
+                </div>
+                 <div className="p-3 rounded-md bg-background/50 border">
+                  <h4 className="font-semibold text-foreground/90 mb-1">Consistency Check:</h4>
+                   <p className="text-muted-foreground text-xs">Status: <span className="text-accent font-semibold">Consistent</span>. All key data points align across submitted documents and available internal records.</p>
+                </div>
+
+
               </CardContent>
               <CardFooter>
-                <p className="text-sm font-semibold text-primary">Recommendation: Expedite for Approval</p>
+                <p className="text-sm font-semibold text-primary">AI Recommendation: Expedite for Approval</p>
               </CardFooter>
             </Card>
-
-            <div className="flex flex-col items-center text-left">
-               <div className="rounded-lg overflow-hidden shadow-xl group mb-4">
-                <Image
-                  src="/images/data-analytics-dashboard.png"
-                  alt="AI processing illustration"
-                  width={500}
-                  height={281}
-                  className="group-hover:scale-105 transition-transform duration-300 w-full h-auto max-w-lg mx-auto"
-                />
-              </div>
-              <h4 className="text-lg font-semibold text-foreground mt-2">Unlock Actionable Intelligence</h4>
-              <p className="text-muted-foreground text-sm">
-                ClaimIntel transforms complex data into clear, actionable insights, empowering faster, more accurate decision-making for claims handlers.
-              </p>
-            </div>
           </div>
         </section>
         
