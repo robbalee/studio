@@ -1,9 +1,40 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, FileText, Brain, Smartphone, ShieldOff, Zap, CheckCircle2, Quote, Star, Car, Camera, Video, FileUp, BrainCircuit, ArrowRight, BrainCog, SearchCheck, Sparkles, User, Users } from 'lucide-react';
+import { ShieldCheck, Smartphone, Zap, CheckCircle2, Quote, Star, Car, Camera, Video, FileUp, BrainCircuit, ArrowRight, BrainCog, SearchCheck, Sparkles, User, Users, Home, PlaneTakeoff, Edit, ShieldX } from 'lucide-react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+
+const insuranceSolutions = [
+  {
+    icon: <Car className="h-12 w-12 text-primary mb-4" />,
+    title: "Car Insurance Claims",
+    description: "Accident? Damage? File your auto claim quickly and get back on the road faster.",
+    link: "/claims/new",
+    cta: "File Car Claim"
+  },
+  {
+    icon: <Home className="h-12 w-12 text-primary mb-4" />,
+    title: "Home Insurance Claims",
+    description: "Property damage? We help you file claims for repairs and replacements efficiently.",
+    link: "/claims/new",
+    cta: "File Home Claim"
+  },
+  {
+    icon: <PlaneTakeoff className="h-12 w-12 text-primary mb-4" />,
+    title: "Travel Insurance Claims",
+    description: "Lost baggage? Medical emergency abroad? Submit your travel claims with ease.",
+    link: "/claims/new",
+    cta: "File Travel Claim"
+  },
+  {
+    icon: <Smartphone className="h-12 w-12 text-primary mb-4" />,
+    title: "Gadget Insurance Claims",
+    description: "Broken phone? Damaged laptop? File your gadget protection claims hassle-free.",
+    link: "/claims/new",
+    cta: "File Gadget Claim"
+  }
+];
 
 export default function WelcomePage() {
   return (
@@ -16,7 +47,7 @@ export default function WelcomePage() {
         <div className="flex items-center gap-3">
           <Button asChild variant="outline">
             <Link href="/admin">
-              <Brain className="mr-2 h-4 w-4" />
+              <BrainCog className="mr-2 h-4 w-4" />
               AI Reports
             </Link>
           </Button>
@@ -34,42 +65,38 @@ export default function WelcomePage() {
           Effortless Claims, <br className="hidden md:block" /> Powerful Insights
         </h2>
         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mb-10">
-          A simpler, intelligent way to fill your insurance claims. We're transforming the claims journey for our users.
+          A simpler, intelligent way to file your insurance claims. We're transforming the claims journey.
         </p>
-        <div className="grid md:grid-cols-2 gap-8 items-center max-w-4xl w-full mb-12">
-          <div className="rounded-lg overflow-hidden shadow-2xl group">
-            <Image
-              src="https://storage.googleapis.com/generative-ai-for-developers/images/insurance_claim_illustration.png"
-              alt="ClaimIntel in action"
-              width={600}
-              height={450}
-              className="group-hover:scale-105 transition-transform duration-300 w-full h-auto max-w-xl mx-auto"
-              priority
-            />
+
+        <section className="w-full max-w-4xl mb-12 md:mb-16">
+          <h3 className="text-3xl font-bold font-headline text-foreground mb-10">Explore Our Insurance Solutions</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
+            {insuranceSolutions.map((solution) => (
+              <Card key={solution.title} className="shadow-lg hover:shadow-xl transition-shadow text-center bg-card/70 backdrop-blur-sm flex flex-col">
+                <CardHeader className="items-center">
+                  {solution.icon}
+                  <CardTitle className="text-xl">{solution.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-muted-foreground text-sm">{solution.description}</p>
+                </CardContent>
+                <CardFooter className="flex-col items-center">
+                  <Button asChild className="w-full max-w-xs">
+                    <Link href={solution.link}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      {solution.cta}
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
-          <div className="flex flex-col gap-6 text-left">
-            <FeatureItem
-              icon={<Smartphone className="text-primary h-7 w-7" />}
-              title="Easy Claims for You"
-              description="File and track claims simply. Upload files, get updates, and resolve faster."
-            />
-            <FeatureItem
-              icon={<FileText className="text-primary h-7 w-7" />}
-              title="Smarter Insurer Operations"
-              description="Automate document intake and data extraction with AI. Boost efficiency."
-            />
-            <FeatureItem
-              icon={<ShieldCheck className="text-primary h-7 w-7" />}
-              title="AI-Powered Fraud Detection"
-              description="Identify risks accurately with advanced AI. Make confident decisions."
-            />
-          </div>
-        </div>
+        </section>
         
         <div className="flex flex-col sm:flex-row gap-4 mb-16 md:mb-24">
           <Button size="lg" asChild className="shadow-lg hover:shadow-xl transition-shadow">
-            <Link href="/claims">
-              <User className="mr-2 h-5 w-5" /> For Claimants: File or View Claims
+            <Link href="/claims/new">
+              <User className="mr-2 h-5 w-5" /> For Claimants: Start a New Claim
             </Link>
           </Button>
           <Button size="lg" variant="outline" asChild className="shadow-lg hover:shadow-xl transition-shadow">
@@ -84,7 +111,7 @@ export default function WelcomePage() {
           <h3 className="text-3xl font-bold font-headline text-foreground mb-10">Impactful Results with ClaimIntel</h3>
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
             <ImpactStatCard
-              icon={<ShieldOff className="h-10 w-10 text-primary" />}
+              icon={<ShieldX className="h-10 w-10 text-primary" />}
               value="Up to 80%"
               title="Reduction in Fraudulent Spending"
               description="Our advanced AI identifies and flags suspicious claims with high accuracy, safeguarding insurer resources."
@@ -105,7 +132,7 @@ export default function WelcomePage() {
             <Card className="shadow-xl hover:shadow-2xl transition-shadow text-left bg-card/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl">
-                  <Brain className="mr-2 h-6 w-6 text-primary" />
+                  <BrainCog className="mr-2 h-6 w-6 text-primary" />
                   Sample AI Analysis Report
                 </CardTitle>
                 <CardDescription>Illustrating clarity and actionable intelligence.</CardDescription>
@@ -221,24 +248,6 @@ export default function WelcomePage() {
   );
 }
 
-interface FeatureItemProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-function FeatureItem({ icon, title, description }: FeatureItemProps) {
-  return (
-    <div className="flex items-start gap-4 p-4 bg-card rounded-lg shadow-md hover:shadow-lg transition-shadow">
-      <div className="flex-shrink-0 mt-1">{icon}</div>
-      <div>
-        <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
-        <p className="text-muted-foreground text-sm">{description}</p>
-      </div>
-    </div>
-  );
-}
-
 interface ImpactStatCardProps {
   icon: React.ReactNode;
   value: string;
@@ -328,3 +337,4 @@ function SuccessStoryCard({ quote, story, name, imageSrc }: SuccessStoryCardProp
   );
 }
 
+    
