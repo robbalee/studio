@@ -95,8 +95,7 @@ export function ClaimForm() {
         } catch (error) {
           console.error("Error reading document file:", error);
           toast({ title: "Error Reading Document", description: "Could not process the uploaded document.", variant: "destructive" });
-          // No need to return here, finally will set isSubmitting to false
-          throw error; // re-throw to be caught by outer catch
+          throw error;
         }
       }
 
@@ -107,7 +106,7 @@ export function ClaimForm() {
         } catch (error) {
           console.error("Error reading image files:", error);
           toast({ title: "Error Reading Images", description: "Could not process one or more uploaded images.", variant: "destructive" });
-          throw error; // re-throw
+          throw error;
         }
       }
 
@@ -119,7 +118,7 @@ export function ClaimForm() {
         } catch (error) {
           console.error("Error reading video file:", error);
           toast({ title: "Error Reading Video", description: "Could not process the uploaded video.", variant: "destructive" });
-          throw error; // re-throw
+          throw error;
         }
       }
 
@@ -147,7 +146,6 @@ export function ClaimForm() {
         });
         router.push(`/claims/${newClaim.id}`);
       } else {
-        // This else block might be hit if addClaim returns null due to an error caught within addClaim
         toast({
           title: "Error Submitting Claim",
           description: "There was a problem submitting your claim. Please check notifications for details or try again.",
@@ -156,8 +154,7 @@ export function ClaimForm() {
       }
     } catch (formError) {
       console.error("Error in claim form submission process:", formError);
-      // Toast for errors re-thrown from file reading or other unexpected errors
-      if (!toast.toasts.find(t => t.title === "Error Reading Document" || t.title === "Error Reading Images" || t.title === "Error Reading Video")) {
+      if (!toast.toasts.find(t => ["Error Reading Document", "Error Reading Images", "Error Reading Video"].includes(t.title as string))) {
          toast({
             title: "Form Processing Error",
             description: "An unexpected error occurred while preparing your claim. Please try again.",
@@ -170,6 +167,12 @@ export function ClaimForm() {
   }
 
   const totalLoading = isSubmitting || isContextLoading;
+  let buttonText = "Submit Claim";
+  if (isSubmitting) {
+    buttonText = "Submitting...";
+  } else if (isContextLoading) {
+    buttonText = "Loading...";
+  }
 
   return (
     <Card className="max-w-2xl mx-auto shadow-lg">
@@ -256,7 +259,7 @@ export function ClaimForm() {
                             onBlur={onBlur}
                             onChange={(e) => {
                               const files = e.target.files;
-                              onChange(files); // RHF's onChange
+                              onChange(files); 
                               if (files && files.length > 0) {
                                 setDocFileName(files[0].name);
                               } else {
@@ -294,7 +297,7 @@ export function ClaimForm() {
                 <FormItem>
                   <FormLabel>Supporting Images (Optional, up to {MAX_IMAGES})</FormLabel>
                   <FormControl>
-                    <div> {/* Single wrapper div for FormControl */}
+                    <div> 
                       <div className="relative">
                         <Input
                           id="images-upload"
@@ -307,7 +310,7 @@ export function ClaimForm() {
                           onBlur={onBlur}
                           onChange={(e) => {
                             const files = e.target.files;
-                            onChange(files); // RHF's onChange
+                            onChange(files); 
                             if (files && files.length > 0) {
                               setImageFileNames(Array.from(files).map(f => f.name));
                             } else {
@@ -364,7 +367,7 @@ export function ClaimForm() {
                             onBlur={onBlur}
                             onChange={(e) => {
                               const files = e.target.files;
-                              onChange(files); // RHF's onChange
+                              onChange(files); 
                               if (files && files.length > 0) {
                                 setVideoFileName(files[0].name);
                               } else {
@@ -395,12 +398,11 @@ export function ClaimForm() {
               )}
             />
 
-
             <Button type="submit" className="w-full" disabled={totalLoading}>
               {totalLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
+                  {buttonText}
                 </>
               ) : (
                 "Submit Claim"
