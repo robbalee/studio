@@ -304,17 +304,17 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const addClaim = useCallback(async (newClaimData: NewClaimFormData): Promise<Claim | null> => {
-    setIsLoading(true); 
+    setIsLoading(true);
     let newClaimId = `clm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     
-    let currentExtractedInfoResult: Record<string, ExtractedFieldWithOptionalBox> | undefined;
-    let fraudAssessmentResult: AssessFraudRiskOutput | undefined;
-    let consistencyReportResult: ConsistencyReport | undefined;
+    let currentExtractedInfoResult: Record<string, ExtractedFieldWithOptionalBox> = { ...defaultExtractedInfo };
+    let fraudAssessmentResult: AssessFraudRiskOutput = { ...defaultFraudAssessment };
+    let consistencyReportResult: ConsistencyReport = { ...defaultConsistencyReport };
     
     let docTypeForProcessing: string | undefined;
     let isDocDirectlyProcessableForMedia = false;
 
-    try {
+    try { // Main try block for the entire claim processing
       if (newClaimData.documentUri && newClaimData.documentName) {
         const docNameLower = newClaimData.documentName.toLowerCase();
         docTypeForProcessing = docNameLower.endsWith('.pdf') ? 'PDF Document' :
@@ -352,7 +352,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 addNotification({ title: 'Document Processed', message: `Info extracted from ${newClaimData.documentName}.`, type: 'success', claimId: newClaimId });
               } catch (e) {
                 console.error("Failed to parse extractedFieldsJson string:", e);
-                currentExtractedInfoResult = { parsingError: { value: "Failed to parse AI response for extracted information." } };
+                currentExtractedInfoResult = { parsingError: { value: "Failed to parse AI response for extracted information." }, ...defaultExtractedInfo };
                 addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON.`, type: 'error', claimId: newClaimId });
               }
           } else {
@@ -414,7 +414,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
         addNotification({ title: 'Consistency Check Simulated', message: `Consistency: ${consistencyReportResult.status} for ${newClaimData.claimantName}'s claim.`, type: 'info', claimId: newClaimId });
       } else if (newClaimData.documentUri) {
-          consistencyReportResult = { status: 'Not Run', summary: 'Consistency check requires full AI analysis of all related documents. Main document uploaded.', };
+          consistencyReportResult = { ...defaultConsistencyReport, status: 'Not Run', summary: 'Consistency check requires full AI analysis of all related documents. Main document uploaded.' };
       }
 
       const now = Timestamp.now();
@@ -433,9 +433,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         status: 'Pending' as ClaimStatus,
         submissionDate: now,
         lastUpdatedDate: now,
-        extractedInfo: currentExtractedInfoResult || defaultExtractedInfo,
-        fraudAssessment: fraudAssessmentResult || defaultFraudAssessment,
-        consistencyReport: consistencyReportResult || defaultConsistencyReport,
+        extractedInfo: currentExtractedInfoResult, // Already defaulted at declaration or within blocks
+        fraudAssessment: fraudAssessmentResult, // Already defaulted at declaration or within blocks
+        consistencyReport: consistencyReportResult, // Already defaulted at declaration or within blocks
         notes: '',
       };
 
@@ -450,14 +450,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setClaims(prevClaims => [newClaimForState, ...prevClaims].sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime()));
       addNotification({ title: 'Claim Submitted to DB', message: `New claim #${newClaimForState.id.substring(0,12)}... by ${newClaimForState.claimantName} saved.`, type: 'success', claimId: newClaimForState.id });
       resetKycSession();
-      setIsLoading(false);
       return newClaimForState;
 
     } catch (error) {
       console.error("Error adding claim to Firestore or during AI processing:", error);
       addNotification({ title: 'Claim Submission Failed', message: `There was an error saving the claim or processing AI tasks. Details: ${error instanceof Error ? error.message : String(error)}`, type: 'error', claimId: newClaimId });
-      setIsLoading(false);
       return null;
+    } finally {
+      setIsLoading(false); // This will always be called
     }
   }, [addNotification, resetKycSession]);
 
