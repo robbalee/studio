@@ -137,11 +137,10 @@ export default function WelcomePage() {
             <div className="flex flex-col items-center text-left">
                <div className="rounded-lg overflow-hidden shadow-xl group mb-4">
                 <Image
-                  src="https://placehold.co/500x281.png"
+                  src="/images/data-analytics-dashboard.png"
                   alt="AI processing illustration"
                   width={500}
                   height={281}
-                  data-ai-hint="data analytics dashboard"
                   className="group-hover:scale-105 transition-transform duration-300 w-full h-auto max-w-lg mx-auto"
                 />
               </div>
@@ -163,15 +162,13 @@ export default function WelcomePage() {
               quote="I couldn't believe how fast my claim was processed! What used to take weeks was sorted in days."
               story="After a minor car accident, Sarah was dreading the usual lengthy claims process. With ClaimIntel, she submitted her documents and photos from her phone in minutes. Her claim was reviewed and approved within 48 hours."
               name="Sarah M."
-              imageSrc="https://placehold.co/80x80.png"
-              imageHint="happy person"
+              imageSrc="/images/happy-person.png"
             />
             <SuccessStoryCard
               quote="ClaimIntel made submitting my water damage claim so straightforward. No confusing forms, just a simple process."
               story="When a pipe burst in David's kitchen, he was overwhelmed. ClaimIntel's guided submission process helped him upload all necessary information, including videos of the damage, leading to a quick assessment and approval for repairs."
               name="David K."
-              imageSrc="https://placehold.co/80x80.png"
-              imageHint="satisfied customer"
+              imageSrc="/images/satisfied-customer.png"
             />
           </div>
         </section>
@@ -298,10 +295,9 @@ interface SuccessStoryCardProps {
   story: string;
   name: string;
   imageSrc: string;
-  imageHint: string;
 }
 
-function SuccessStoryCard({ quote, story, name, imageSrc, imageHint }: SuccessStoryCardProps) {
+function SuccessStoryCard({ quote, story, name, imageSrc }: SuccessStoryCardProps) {
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/70 backdrop-blur-sm text-left">
       <CardHeader className="pb-3">
@@ -323,7 +319,6 @@ function SuccessStoryCard({ quote, story, name, imageSrc, imageHint }: SuccessSt
             alt={name}
             width={40}
             height={40}
-            data-ai-hint={imageHint}
             className="rounded-full"
           />
           <p className="text-sm font-semibold text-foreground">{name}</p>
