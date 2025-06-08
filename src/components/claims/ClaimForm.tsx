@@ -79,81 +79,93 @@ export function ClaimForm() {
 
   async function onSubmit(data: ClaimFormValues) {
     setIsSubmitting(true);
-    let documentUri: string | undefined;
-    let documentName: string | undefined;
-    let imageUris: string[] = [];
-    let imageNames: string[] = [];
-    let videoUri: string | undefined;
-    let videoName: string | undefined;
+    try {
+      let documentUri: string | undefined;
+      let documentName: string | undefined;
+      let imageUris: string[] = [];
+      let imageNames: string[] = [];
+      let videoUri: string | undefined;
+      let videoName: string | undefined;
 
-    if (data.document && data.document.length > 0) {
-      const file = data.document[0];
-      documentName = file.name;
-      try {
-        documentUri = await readFileAsDataURL(file);
-      } catch (error) {
-        console.error("Error reading document file:", error);
-        toast({ title: "Error Reading Document", description: "Could not process the uploaded document.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
+      if (data.document && data.document.length > 0) {
+        const file = data.document[0];
+        documentName = file.name;
+        try {
+          documentUri = await readFileAsDataURL(file);
+        } catch (error) {
+          console.error("Error reading document file:", error);
+          toast({ title: "Error Reading Document", description: "Could not process the uploaded document.", variant: "destructive" });
+          // No need to return here, finally will set isSubmitting to false
+          throw error; // re-throw to be caught by outer catch
+        }
       }
-    }
 
-    if (data.images && data.images.length > 0) {
-      imageNames = Array.from(data.images).map(file => file.name);
-      try {
-        imageUris = await Promise.all(Array.from(data.images).map(file => readFileAsDataURL(file)));
-      } catch (error) {
-        console.error("Error reading image files:", error);
-        toast({ title: "Error Reading Images", description: "Could not process one or more uploaded images.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
+      if (data.images && data.images.length > 0) {
+        imageNames = Array.from(data.images).map(file => file.name);
+        try {
+          imageUris = await Promise.all(Array.from(data.images).map(file => readFileAsDataURL(file)));
+        } catch (error) {
+          console.error("Error reading image files:", error);
+          toast({ title: "Error Reading Images", description: "Could not process one or more uploaded images.", variant: "destructive" });
+          throw error; // re-throw
+        }
       }
-    }
 
-    if (data.video && data.video.length > 0) {
-      const file = data.video[0];
-      videoName = file.name;
-      try {
-        videoUri = await readFileAsDataURL(file);
-      } catch (error) {
-        console.error("Error reading video file:", error);
-        toast({ title: "Error Reading Video", description: "Could not process the uploaded video.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
+      if (data.video && data.video.length > 0) {
+        const file = data.video[0];
+        videoName = file.name;
+        try {
+          videoUri = await readFileAsDataURL(file);
+        } catch (error) {
+          console.error("Error reading video file:", error);
+          toast({ title: "Error Reading Video", description: "Could not process the uploaded video.", variant: "destructive" });
+          throw error; // re-throw
+        }
       }
-    }
 
-    const claimData = {
-      claimantName: data.claimantName,
-      policyNumber: data.policyNumber,
-      incidentDate: data.incidentDate,
-      incidentDescription: data.incidentDescription,
-      documentUri,
-      documentName,
-      imageUris,
-      imageNames,
-      videoUri,
-      videoName,
-    };
+      const claimData = {
+        claimantName: data.claimantName,
+        policyNumber: data.policyNumber,
+        incidentDate: data.incidentDate,
+        incidentDescription: data.incidentDescription,
+        documentUri,
+        documentName,
+        imageUris,
+        imageNames,
+        videoUri,
+        videoName,
+      };
 
-    const newClaim = await addClaim(claimData);
-    setIsSubmitting(false);
+      const newClaim = await addClaim(claimData);
 
-    if (newClaim) {
-      toast({
-        title: "Claim Submitted Successfully",
-        description: `Claim ID: ${newClaim.id} has been submitted.`,
-        variant: "default",
-        className: "bg-accent text-accent-foreground",
-      });
-      router.push(`/claims/${newClaim.id}`);
-    } else {
-      toast({
-        title: "Error Submitting Claim",
-        description: "There was a problem submitting your claim. Please try again.",
-        variant: "destructive",
-      });
+      if (newClaim) {
+        toast({
+          title: "Claim Submitted Successfully",
+          description: `Claim ID: ${newClaim.id} has been submitted.`,
+          variant: "default",
+          className: "bg-accent text-accent-foreground",
+        });
+        router.push(`/claims/${newClaim.id}`);
+      } else {
+        // This else block might be hit if addClaim returns null due to an error caught within addClaim
+        toast({
+          title: "Error Submitting Claim",
+          description: "There was a problem submitting your claim. Please check notifications for details or try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (formError) {
+      console.error("Error in claim form submission process:", formError);
+      // Toast for errors re-thrown from file reading or other unexpected errors
+      if (!toast.toasts.find(t => t.title === "Error Reading Document" || t.title === "Error Reading Images" || t.title === "Error Reading Video")) {
+         toast({
+            title: "Form Processing Error",
+            description: "An unexpected error occurred while preparing your claim. Please try again.",
+            variant: "destructive",
+          });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -400,3 +412,4 @@ export function ClaimForm() {
     </Card>
   );
 }
+
