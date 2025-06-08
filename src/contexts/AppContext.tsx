@@ -82,7 +82,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     policyNumber: 'POL-003',
     incidentDate: '2024-07-20',
     incidentDescription: 'Claim for damages to specialized electronic equipment during a power surge. Multiple items affected, detailed list attached.',
-    documentName: 'EquipmentDamageReport.pdf',
+    documentName: 'EquipmentDamageReport.docx', // Changed to .docx for testing
     documentUri: '', // Will be set by useEffect seed logic
     imageNames: ['damaged_equipment_1.jpg', 'surge_protector.jpg', 'invoice_scan.jpg'],
     imageUris: ['https://placehold.co/150x100.png?text=Equip1', 'https://placehold.co/150x100.png?text=SurgeP', 'https://placehold.co/150x100.png?text=InvoiceScan'],
@@ -99,8 +99,8 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
       status: 'Partial',
       summary: "Policy number matches internal records. Reported incident date consistent with power outage logs in the area. However, specific equipment serial numbers not found in submitted documents for cross-referencing with purchase invoices on file.",
       details: [
-        { documentA: 'EquipmentDamageReport.pdf', documentB: 'Internal Policy Record', field: 'Policy Number', valueA: 'POL-003', valueB: 'POL-003', finding: 'Match' },
-        { documentA: 'EquipmentDamageReport.pdf', documentB: 'Purchase Invoices (on file)', field: 'Equipment Serial Numbers', valueA: 'Not Provided', valueB: 'SN-XYZ-123, SN-ABC-456', finding: 'Missing in A' }
+        { documentA: 'EquipmentDamageReport.docx', documentB: 'Internal Policy Record', field: 'Policy Number', valueA: 'POL-003', valueB: 'POL-003', finding: 'Match' },
+        { documentA: 'EquipmentDamageReport.docx', documentB: 'Purchase Invoices (on file)', field: 'Equipment Serial Numbers', valueA: 'Not Provided', valueB: 'SN-XYZ-123, SN-ABC-456', finding: 'Missing in A' }
       ]
     },
     notes: 'Adjuster contacted claimant for serial numbers and proof of purchase.',
@@ -110,7 +110,7 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
     policyNumber: 'POL-004',
     incidentDate: '2024-07-21',
     incidentDescription: 'Theft of rare artifact from private collection. No forced entry, security system mysteriously offline.',
-    documentName: 'TheftStatement_DP.txt',
+    documentName: 'TheftStatement_DP.zip', // Changed to .zip for testing
     documentUri: '', // Will be set by useEffect seed logic
     imageNames: ['empty_display_case.jpg'],
     imageUris: ['https://placehold.co/150x100.png?text=EmptyCase'],
@@ -125,8 +125,8 @@ const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'
       status: 'Inconsistent',
       summary: "Significant discrepancies found. The claimed artifact is not listed on the policy schedule. The reported incident date conflicts with travel records showing claimant was out of the country.",
       details: [
-        { documentA: 'TheftStatement_DP.txt', documentB: 'Policy Schedule POL-004', field: 'Insured Item "Ancient Amazonian Shield"', valueA: 'Claimed', valueB: 'Not Listed', finding: 'Mismatch' },
-        { documentA: 'TheftStatement_DP.txt', documentB: 'Travel Records (External System)', field: 'Claimant Location on Incident Date', valueA: 'At Residence', valueB: 'Overseas (Themyscira)', finding: 'Mismatch' }
+        { documentA: 'TheftStatement_DP.zip', documentB: 'Policy Schedule POL-004', field: 'Insured Item "Ancient Amazonian Shield"', valueA: 'Claimed', valueB: 'Not Listed', finding: 'Mismatch' },
+        { documentA: 'TheftStatement_DP.zip', documentB: 'Travel Records (External System)', field: 'Claimant Location on Incident Date', valueA: 'At Residence', valueB: 'Overseas (Themyscira)', finding: 'Mismatch' }
       ]
     },
     notes: 'Claim rejected due to strong evidence of misrepresentation and potential fraud. Referred to Special Investigations Unit.',
@@ -214,10 +214,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                                      Timestamp.fromDate(new Date(submissionDate.toDate().getTime() + (Math.random() * 24 + 12) * 60 * 60 * 1000)) : // Random update within 12-36 hrs for non-pending
                                      submissionDate;
 
-            // Create a more descriptive plain text data URI for Q&A if documentUri is empty
+            // Create a more descriptive plain text data URI for Q&A if documentUri is empty or for specific non-directly processable types
             let finalDocumentUri = claimData.documentUri;
-            if (!finalDocumentUri && claimData.documentName) {
-                 const textContent = `Document: ${claimData.documentName}\nClaimant: ${claimData.claimantName}\nPolicy Number: ${claimData.policyNumber}\nIncident Date: ${claimData.incidentDate}\nDescription: ${claimData.incidentDescription}\nExtracted Info Sample: ${JSON.stringify(Object.keys(claimData.extractedInfo || {}).slice(0,2).reduce((acc, key) => { acc[key] = (claimData.extractedInfo as any)[key].value; return acc; }, {} as any))}`;
+            const documentNameLower = claimData.documentName?.toLowerCase() || '';
+            const isProblematicTypeForSeedMedia = documentNameLower.endsWith('.docx') || documentNameLower.endsWith('.doc') || documentNameLower.endsWith('.zip');
+
+            if (!finalDocumentUri || isProblematicTypeForSeedMedia) {
+                 const textContent = `Document Name: ${claimData.documentName}\nDocument Type: ${documentNameLower.endsWith('.pdf') ? 'PDF Document' : documentNameLower.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' : documentNameLower.endsWith('.zip') ? 'ZIP Archive' : 'General Document'}\nClaimant: ${claimData.claimantName}\nPolicy Number: ${claimData.policyNumber}\nIncident Date: ${claimData.incidentDate}\nDescription: ${claimData.incidentDescription}\nExtracted Info Sample (if any): ${JSON.stringify(Object.keys(claimData.extractedInfo || {}).slice(0,2).reduce((acc, key) => { acc[key] = (claimData.extractedInfo as any)[key].value; return acc; }, {} as any))}`;
                  finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
             }
             
@@ -301,13 +304,42 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       // AI Processing (Document Extraction, Fraud Assessment, Consistency Check) - This part remains the same
       if (newClaimData.documentUri && newClaimData.documentName) {
-        const docType = newClaimData.documentName.endsWith('.pdf') ? 'PDF Document' :
-                        newClaimData.documentName.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' :
-                        newClaimData.documentName.endsWith('.zip') ? 'ZIP Archive' : 'General Document';
+        const docNameLower = newClaimData.documentName.toLowerCase();
+        const docType = docNameLower.endsWith('.pdf') ? 'PDF Document' :
+                        docNameLower.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' :
+                        docNameLower.endsWith('.zip') ? 'ZIP Archive' : 
+                        (docNameLower.endsWith('.doc') || docNameLower.endsWith('.docx')) ? 'General Document' : // Explicitly 'General Document' for Word
+                        'Other Document'; // Fallback for other types
+        
+        let isDirectlyProcessableMedia = false;
+        let mimeTypeForProcessing = '';
+
+        const mimeTypeMatch = newClaimData.documentUri.match(/^data:(.+?);base64,/);
+        if (mimeTypeMatch && mimeTypeMatch[1]) {
+          mimeTypeForProcessing = mimeTypeMatch[1];
+          const supportedMimeTypesForMediaHelper = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf',
+            'text/plain',
+            // Add other MIME types Gemini supports for media if known, e.g., some video types if used with {{media}}
+          ];
+          if (supportedMimeTypesForMediaHelper.includes(mimeTypeForProcessing)) {
+            isDirectlyProcessableMedia = true;
+          }
+        }
+        // If it's a docx, doc, or zip based on name, ensure it's not flagged as directly processable
+        // even if its data URI somehow gets a 'text/plain' or other generic MIME type.
+        if (docType === 'General Document' || docType === 'ZIP Archive' || docType === 'Other Document') {
+            isDirectlyProcessableMedia = false;
+        }
+
+
         try {
           const extractionResult = await extractDocumentInformation({
             documentDataUri: newClaimData.documentUri,
             documentType: docType,
+            documentName: newClaimData.documentName,
+            isDirectlyProcessableMedia: isDirectlyProcessableMedia,
           });
           if (extractionResult.extractedFieldsJson) {
              try {
@@ -539,6 +571,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-    
-
-    

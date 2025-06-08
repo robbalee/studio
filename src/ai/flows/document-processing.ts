@@ -18,7 +18,9 @@ const ExtractDocumentInformationInputSchema = z.object({
     .describe(
       "A document, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  documentType: z.string().describe('The type of the document (e.g., claim form, invoice, receipt, image).'),
+  documentType: z.string().describe('The type of the document (e.g., claim form, invoice, receipt, image, General Document, ZIP Archive).'),
+  documentName: z.string().optional().describe('The original filename of the document, if available.'),
+  isDirectlyProcessableMedia: z.boolean().describe('Whether the document content can be directly processed as media by the AI (e.g., images, PDFs). If false, AI should rely on documentType and documentName.')
 });
 export type ExtractDocumentInformationInput = z.infer<typeof ExtractDocumentInformationInputSchema>;
 
@@ -64,7 +66,21 @@ const prompt = ai.definePrompt({
 Analyze the provided document based on its type and extract all relevant information.
 
 Document Type: {{{documentType}}}
-Document: {{media url=documentDataUri}}
+{{#if documentName}}Document Name: {{{documentName}}}{{/if}}
+
+{{#if isDirectlyProcessableMedia}}
+Document Content (directly viewable):
+{{media url=documentDataUri}}
+{{else}}
+Document Content (not directly viewable):
+[The content for this document type ('{{{documentType}}}'{{#if documentName}} named '{{{documentName}}}'{{/if}}) is not directly viewable by you.
+Analyze based on the document type and its commonly associated fields. For example:
+- If '{{{documentType}}}' is 'Claim Form', look for standard fields like Policy Number, Claimant Name, Incident Date, Description of Incident.
+- If '{{{documentType}}}' is 'Invoice' or 'Receipt', look for Vendor Name, Date, Itemized List (Items, Quantities, Prices), Subtotal, Tax, Total Amount.
+- If '{{{documentType}}}' is 'General Document' and named like a report, try to extract summary, key findings, dates, names.
+- If '{{{documentType}}}' is 'ZIP Archive', assume it contains multiple related files. Describe what kind of information you would typically expect in such an archive for an insurance claim (e.g., multiple receipts, photos, correspondence) and list common fields found in those documents. Do not attempt to list file names from the ZIP.]
+Use your knowledge of common document structures for '{{{documentType}}}' to infer and extract relevant fields.
+{{/if}}
 
 The output must be a single field named "extractedFieldsJson".
 The value of "extractedFieldsJson" must be a JSON string.
@@ -73,16 +89,16 @@ This JSON string should represent an object where:
 - Each value associated with a key is an object containing:
   1. A "value" field: This holds the actual extracted data for that key. It can be a string or a nested JSON object if the information is complex (like a list of items or structured details).
   2. An optional "boundingBox" field:
-     - If you can identify the specific region on the document page from which the "value" was extracted, provide a "boundingBox" object.
+     - If you can identify the specific region on the document page from which the "value" was extracted (only possible if isDirectlyProcessableMedia was true and the document was an image/PDF), provide a "boundingBox" object.
      - This "boundingBox" object must include:
        - "x": Normalized top-left x-coordinate (a float between 0.0 and 1.0, relative to page width).
        - "y": Normalized top-left y-coordinate (a float between 0.0 and 1.0, relative to page height).
        - "width": Normalized width of the box (a float between 0.0 and 1.0, relative to page width).
        - "height": Normalized height of the box (a float between 0.0 and 1.0, relative to page height).
        - "page": The page number where the entity was found (an integer, starting from 1).
-     - If a bounding box cannot be determined for a field, or if it's not applicable (e.g., for a summary field you generated), set the "boundingBox" field to null or omit it.
+     - If a bounding box cannot be determined for a field, or if it's not applicable (e.g., for a summary field you generated, or if isDirectlyProcessableMedia was false), set the "boundingBox" field to null or omit it.
 
-Be as comprehensive as possible with the extracted fields. If the document is an image of a receipt, for example, extract vendor name, date, itemized list of purchases with prices, subtotal, tax, and total amount. Each of these could have a bounding box.
+Be as comprehensive as possible with the extracted fields.
 
 Example of the "extractedFieldsJson" string content:
 "{\\"policyNumber\\": {\\"value\\": \\"POL-12345\\", \\"boundingBox\\": {\\"x\\":0.15, \\"y\\":0.22, \\"width\\":0.20, \\"height\\":0.04, \\"page\\":1}}, \\"claimantName\\": {\\"value\\": \\"Jane Doe\\", \\"boundingBox\\": {\\"x\\":0.15, \\"y\\":0.28, \\"width\\":0.30, \\"height\\":0.04, \\"page\\":1}}, \\"incidentSummary\\": {\\"value\\": \\"Vehicle collision at intersection.\\", \\"boundingBox\\": null}}"`
