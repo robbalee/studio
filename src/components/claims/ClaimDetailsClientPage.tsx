@@ -23,7 +23,7 @@ const claimStatuses: ClaimStatus[] = ['Pending', 'Under Review', 'Approved', 'Re
 export function ClaimDetailsClientPage() {
   const params = useParams();
   const router = useRouter();
-  const { getClaimById, updateClaimStatus, isLoading: isContextLoading, askQuestionOnDocument, qaAnswer, isAskingQuestion, clearQaAnswer } = useAppContext();
+  const { getClaimById, updateClaimStatus, askQuestionOnDocument, qaAnswer, isAskingQuestion, clearQaAnswer, isLoading: isContextStillGloballyLoading } = useAppContext(); // Added isContextStillGloballyLoading for clarity if needed
   const { toast } = useToast();
 
   const [claim, setClaim] = useState<Claim | null | undefined>(undefined); 
@@ -37,17 +37,34 @@ export function ClaimDetailsClientPage() {
   useEffect(() => {
     if (claimId) {
       const foundClaim = getClaimById(claimId);
-      setClaim(foundClaim);
+      setClaim(foundClaim); // This might be initially undefined if claims are still loading
       if (foundClaim) {
         setSelectedStatus(foundClaim.status);
         setNotes(foundClaim.notes || '');
-        clearQaAnswer(); // Clear previous Q&A answer when navigating to a new claim
+        clearQaAnswer(); 
+      } else {
+        // If claim not found immediately, AppContext might still be loading.
+        // We rely on claim === undefined for the loader.
       }
     }
-     return () => { // Cleanup on unmount
+     return () => { 
       clearQaAnswer();
     };
   }, [claimId, getClaimById, clearQaAnswer]);
+  
+  // This effect will re-check for the claim if the global claims list changes
+  // and the local claim state is still undefined (or doesn't match claimId).
+  useEffect(() => {
+    if (claimId && claim === undefined) {
+      const foundClaim = getClaimById(claimId);
+      if (foundClaim) {
+        setClaim(foundClaim);
+        setSelectedStatus(foundClaim.status);
+        setNotes(foundClaim.notes || '');
+      }
+    }
+  }, [getClaimById, claimId, claim]);
+
 
   const handleStatusUpdate = () => {
     if (claim && selectedStatus) {
@@ -58,8 +75,8 @@ export function ClaimDetailsClientPage() {
         description: `Claim ${claim.id} status set to ${selectedStatus}.`,
         className: "bg-accent text-accent-foreground",
       });
-      const updatedClaim = getClaimById(claim.id);
-      setClaim(updatedClaim);
+      const updatedClaim = getClaimById(claim.id); // Re-fetch to get latest state if needed
+      setClaim(updatedClaim); 
       setIsUpdating(false);
     }
   };
@@ -67,7 +84,7 @@ export function ClaimDetailsClientPage() {
   const handleAskQuestion = async () => {
     if (claim && claim.documentUri && questionText.trim()) {
       await askQuestionOnDocument(claim.documentUri, questionText.trim(), claim.id);
-      setQuestionText(''); // Clear input after asking
+      setQuestionText(''); 
     } else if (!claim?.documentUri) {
        toast({ title: "No Document", description: "This claim does not have a document to ask questions about.", variant: "destructive" });
     } else {
@@ -75,8 +92,8 @@ export function ClaimDetailsClientPage() {
     }
   };
 
-
-  if (claim === undefined || isContextLoading && !isAskingQuestion) { // Don't show main loader if only Q&A is loading
+  // Primary loading indicator for the claim data itself
+  if (claim === undefined && !isAskingQuestion) { 
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -85,7 +102,7 @@ export function ClaimDetailsClientPage() {
     );
   }
 
-  if (!claim) {
+  if (!claim) { // This means claimId was processed, but no claim was found (e.g., invalid ID)
     return (
       <Card className="text-center p-8">
         <CardHeader>
@@ -229,8 +246,8 @@ export function ClaimDetailsClientPage() {
                         <NextImage
                           src={uri}
                           alt={claim.imageNames?.[index] || `Uploaded Image ${index + 1}`}
-                          layout="fill"
-                          objectFit="cover"
+                          fill // Use fill for responsive images within a sized container
+                          style={{objectFit: 'cover'}} // Ensures image covers the area
                           onError={(e) => (e.currentTarget.src = 'https://placehold.co/100x100.png?text=Error')}
                         />
                          {claim.imageNames?.[index] && (
@@ -296,7 +313,7 @@ export function ClaimDetailsClientPage() {
                 Ask AI
               </Button>
             </div>
-            {isAskingQuestion && !qaAnswer && (
+            {isAskingQuestion && !qaAnswer && ( // Show thinking only when actively asking and no answer yet
               <div className="flex items-center text-muted-foreground p-4 border rounded-md bg-muted/30">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 AI is thinking...
@@ -345,8 +362,8 @@ export function ClaimDetailsClientPage() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button onClick={handleStatusUpdate} disabled={!selectedStatus || isUpdating || isContextLoading}>
-            {isUpdating || isContextLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          <Button onClick={handleStatusUpdate} disabled={!selectedStatus || isUpdating || isContextStillGloballyLoading}>
+            {isUpdating || isContextStillGloballyLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Update Status
           </Button>
         </CardFooter>

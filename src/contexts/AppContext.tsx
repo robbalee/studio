@@ -7,7 +7,7 @@ import type { Claim, AppNotification, ClaimStatus, ConsistencyReport, ExtractedF
 import { assessFraudRisk } from '@/ai/flows/fraud-assessment';
 import { extractDocumentInformation } from '@/ai/flows/document-processing';
 import { qaOnDocument } from '@/ai/flows/qa-on-document';
-import { db } from '@/lib/firebase'; // Import Firestore instance
+import { db } from '@/lib/firebase'; 
 import {
   collection,
   getDocs,
@@ -17,123 +17,145 @@ import {
   writeBatch,
   query,
   orderBy,
-  Timestamp // Import Timestamp for date fields
+  Timestamp 
 } from 'firebase/firestore';
 
-// Initial Data (will be used for one-time seeding if Firestore is empty)
-const initialClaimsSeed: Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'>[] = [
+// Helper to process raw seed data into full Claim objects for initial state
+const processSeedForInitialState = (
+  seedArray: (Omit<Claim, 'submissionDate' | 'lastUpdatedDate'> & { id: string })[] // Ensure ID is part of seed
+): Claim[] => {
+  return seedArray.map((claimData, index) => {
+    const submissionDate = new Date(Date.now() - (seedArray.length - 1 - index) * 24 * 60 * 60 * 1000 * (3 + index)).toISOString(); // Stagger submission dates further
+    const lastUpdatedDate = claimData.status !== 'Pending' ?
+      new Date(new Date(submissionDate).getTime() + (Math.random() * 24 + 12) * 60 * 60 * 1000).toISOString() :
+      submissionDate;
+
+    let finalDocumentUri = claimData.documentUri;
+    if ((!finalDocumentUri || finalDocumentUri.startsWith('https://placehold.co')) && claimData.documentName) { // Also handle placeholder URIs
+      const textContent = `Document: ${claimData.documentName}\nType: ${claimData.documentName.split('.').pop() || 'unknown'}\nClaimant: ${claimData.claimantName}\nPolicy Number: ${claimData.policyNumber}\nIncident Date: ${claimData.incidentDate}\nDescription: ${claimData.incidentDescription}`;
+      finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
+    }
+
+    const imageUris = claimData.imageUris && claimData.imageUris.length > 0 ? claimData.imageUris 
+                      : claimData.imageNames && claimData.imageNames.length > 0 
+                      ? claimData.imageNames.map((name, i) => `https://placehold.co/150x100.png?text=${encodeURIComponent(name.substring(0,10))}${i+1}`) 
+                      : [];
+    
+    const videoUri = claimData.videoUri ? claimData.videoUri 
+                      : claimData.videoName 
+                      ? `https://placehold.co/160x90.png?text=${encodeURIComponent(claimData.videoName.substring(0,10))}` 
+                      : undefined;
+
+    return {
+      ...claimData,
+      documentUri: finalDocumentUri,
+      imageUris: imageUris,
+      videoUri: videoUri,
+      submissionDate: submissionDate,
+      lastUpdatedDate: lastUpdatedDate,
+    } as Claim; 
+  });
+};
+
+
+const staticDemoAppContextClaimsSeed: (Omit<Claim, 'submissionDate' | 'lastUpdatedDate'> & { id: string })[] = [
   {
-    claimantName: 'Alice Wonderland',
-    policyNumber: 'POL-001',
-    incidentDate: '2024-07-15',
-    incidentDescription: 'Minor fender bender in parking lot. Scratches on rear bumper.',
-    documentName: 'AccidentReport.pdf',
-    documentUri: '',
-    imageNames: ['damage_front.jpg', 'damage_side.jpg'],
-    imageUris: ['https://placehold.co/150x100.png?text=Img1.1', 'https://placehold.co/150x100.png?text=Img1.2'],
-    videoName: 'dashcam_footage.mp4',
-    videoUri: 'https://placehold.co/160x90.png?text=Vid1',
-    status: 'Pending',
-    extractedInfo: {
-      policyNumber: { value: "POL-001", boundingBox: { x: 0.1, y: 0.05, width: 0.2, height: 0.03, page: 1 } },
-      claimantName: { value: "Alice Wonderland", boundingBox: { x: 0.1, y: 0.10, width: 0.3, height: 0.03, page: 1 } },
-      incidentLocation: { value: "Mall Parking Lot", boundingBox: null },
-      vehicleDamage: { value: "Scratches on rear bumper", boundingBox: { x: 0.1, y: 0.25, width: 0.5, height: 0.08, page: 1 } }
-    },
-    fraudAssessment: { riskScore: 0.1, fraudIndicators: ["Low impact collision"], summary: "Low risk, standard claim." },
-    consistencyReport: {
-      status: 'Consistent',
-      summary: 'Key details (Claimant Name, Incident Date) appear consistent between AccidentReport.pdf and Police Report (on file).',
-      details: [
-        { documentA: 'AccidentReport.pdf', documentB: 'Police Report (on file)', field: 'Claimant Name', valueA: 'Alice Wonderland', valueB: 'Alice Wonderland', finding: 'Match' },
-        { documentA: 'AccidentReport.pdf', documentB: 'Police Report (on file)', field: 'Incident Date', valueA: '2024-07-15', valueB: '2024-07-15', finding: 'Match'},
-      ]
-    },
-    notes: 'Awaiting adjuster review.',
-  },
-  {
-    claimantName: 'Bob The Builder',
-    policyNumber: 'POL-002',
-    incidentDate: '2024-07-18',
-    incidentDescription: 'Water damage from burst pipe in kitchen.',
-    documentName: 'PlumberInvoice.pdf',
-    documentUri: '',
+    id: 'static_demo_approved_123', 
+    claimantName: 'Carol Danvers (Demo)',
+    policyNumber: 'POL-STATIC-001',
+    incidentDate: '2024-07-22',
+    incidentDescription: 'Lost luggage during international flight. Contents included high-value electronics and personal items.',
+    documentName: 'LostLuggage_CD.pdf',
+    documentUri: '', 
+    imageNames: ['receipt_laptop.jpg', 'receipt_camera.jpg'],
+    imageUris: ['https://placehold.co/150x100.png?text=LaptopRec', 'https://placehold.co/150x100.png?text=CameraRec'],
     status: 'Approved',
     extractedInfo: {
-      invoiceTotal: { value: "$500", boundingBox: { x: 0.7, y: 0.8, width: 0.15, height: 0.04, page: 1 } },
-      serviceDate: { value: "2024-07-19", boundingBox: { x: 0.1, y: 0.15, width: 0.2, height: 0.03, page: 1 } },
-      plumberName: { value: "FixIt Plumbing", boundingBox: null }
+      flightNumber: { value: "CX808", boundingBox: { x: 0.1, y: 0.05, width: 0.2, height: 0.03, page: 1 } },
+      totalClaimValue: { value: "$2,800", boundingBox: null },
+      itemsList: { value: {"laptop": "MacBook Pro 16\"", "camera": "Sony A7IV"}, boundingBox: { x: 0.1, y: 0.25, width: 0.5, height: 0.08, page: 1 } }
     },
-    fraudAssessment: { riskScore: 0.05, fraudIndicators: [], summary: "Straightforward water damage claim. Approved." },
+    fraudAssessment: { riskScore: 0.01, fraudIndicators: ["None"], summary: "Very low risk. Verified travel itinerary and purchase receipts." },
     consistencyReport: {
-      status: 'Inconsistent',
-      summary: 'Discrepancy noted in "Service Date" between PlumberInvoice.pdf and Homeowner Statement (on file). Further review suggested for date alignment.',
-      details: [
-        { documentA: 'PlumberInvoice.pdf', documentB: 'Homeowner Statement (on file)', field: 'Service Date', valueA: '2024-07-19', valueB: '2024-07-18', finding: 'Mismatch' },
-        { documentA: 'PlumberInvoice.pdf', documentB: 'Homeowner Statement (on file)', field: 'Reported Damage', valueA: 'Burst pipe', valueB: 'Water leak', finding: 'Not Compared' }
-      ]
+      status: 'Consistent',
+      summary: 'Claim details, flight information, and purchase receipts align. No discrepancies found.',
+      details: [{ documentA: 'LostLuggage_CD.pdf', documentB: 'Airline System Data', field: 'Flight CX808 Status', valueA: 'Confirmed, Luggage Tagged', valueB: 'Confirmed, Luggage Tagged, Reported Missing', finding: 'Match' }]
     },
-    notes: 'Payment processed.',
+    notes: 'Approved for full reimbursement. Payment issued.',
   },
   {
-    claimantName: 'Charles Xavier',
-    policyNumber: 'POL-003',
-    incidentDate: '2024-07-20',
-    incidentDescription: 'Claim for damages to specialized electronic equipment during a power surge. Multiple items affected, detailed list attached.',
-    documentName: 'EquipmentDamageReport.docx',
-    documentUri: '',
-    imageNames: ['damaged_equipment_1.jpg', 'surge_protector.jpg', 'invoice_scan.jpg'],
-    imageUris: ['https://placehold.co/150x100.png?text=Equip1', 'https://placehold.co/150x100.png?text=SurgeP', 'https://placehold.co/150x100.png?text=InvoiceScan'],
-    videoName: 'security_cam_surge.mp4',
-    videoUri: 'https://placehold.co/160x90.png?text=SurgeVid',
-    status: 'Under Review',
+    id: 'static_demo_pending_456', 
+    claimantName: 'Peter Parker (Demo)',
+    policyNumber: 'POL-STATIC-002',
+    incidentDate: '2024-07-21',
+    incidentDescription: 'Damage to camera equipment during a sudden rooftop incident. Multiple lenses shattered. Drone also damaged.',
+    documentName: 'DamageReport_PP.zip', // Using ZIP to test non-direct media
+    documentUri: '', 
+    imageNames: ['broken_lens_1.jpg', 'damaged_drone.jpg'],
+    imageUris: ['https://placehold.co/150x100.png?text=LensDmg', 'https://placehold.co/150x100.png?text=DroneDmg'],
+    videoName: 'RooftopIncident_SecurityCam.mp4',
+    videoUri: 'https://placehold.co/160x90.png?text=RooftopVid',
+    status: 'Pending',
     extractedInfo: {
-      affectedItems: { value: { "item1": { "name": "Custom Server Rack", "damage": "Fried motherboard", "estimatedCost": "$2500" }, "item2": { "name": "Precision Sensor Array", "damage": "Unresponsive", "estimatedCost": "$1800" } }, boundingBox: null },
-      incidentLocation: { value: "Client Office Building A", boundingBox: { x: 0.1, y: 0.15, width: 0.4, height: 0.03, page: 1 } },
-      reportedPowerCompany: { value: "City Electric Co.", boundingBox: null }
+      incidentLocation: { value: "Rooftop, Daily Bugle Building (approx.)", boundingBox: null },
+      equipmentList: { value: ["Telephoto Lens 70-200mm", "Wide Angle Lens 16-35mm", "DJI Mavic 3 Pro Drone"], boundingBox: null },
+      estimatedDamageCost: { value: "$4,500 (preliminary)", boundingBox: { x: 0.7, y: 0.8, width: 0.2, height: 0.04, page: 1 } }
     },
-    fraudAssessment: { riskScore: 0.55, fraudIndicators: ["High value of claimed items", "Previous claim for similar equipment 2 years ago (minor)", "Vague description of surge event details"], summary: "Moderate risk due to high claim value and past history. Documented damage appears consistent with a power surge. Recommend verification of equipment ownership and purchase dates." },
+    fraudAssessment: { riskScore: 0.25, fraudIndicators: ["Unusual incident location", "High cost of specialized equipment"], summary: "Low-to-moderate risk. Claimant has a history of similar small claims. Nature of incident requires corroboration if possible. Images show damage consistent with impact." },
     consistencyReport: {
       status: 'Partial',
-      summary: "Policy number matches internal records. Reported incident date consistent with power outage logs in the area. However, specific equipment serial numbers not found in submitted documents for cross-referencing with purchase invoices on file.",
+      summary: 'Equipment listed is consistent with policy endorsements. Incident date plausible. Awaiting police report or further witness statements if available for incident circumstances.',
       details: [
-        { documentA: 'EquipmentDamageReport.docx', documentB: 'Internal Policy Record', field: 'Policy Number', valueA: 'POL-003', valueB: 'POL-003', finding: 'Match' },
-        { documentA: 'EquipmentDamageReport.docx', documentB: 'Purchase Invoices (on file)', field: 'Equipment Serial Numbers', valueA: 'Not Provided', valueB: 'SN-XYZ-123, SN-ABC-456', finding: 'Missing in A' }
+        { documentA: 'DamageReport_PP.zip', documentB: 'Policy Endorsements', field: 'Listed Equipment Coverage', valueA: 'Covered', valueB: 'Covered', finding: 'Match' },
+        { documentA: 'DamageReport_PP.zip', documentB: 'Police Report (if filed)', field: 'Incident Corroboration', valueA: 'Details provided by claimant', valueB: 'Not yet received/cross-referenced', finding: 'Not Compared' }
       ]
     },
-    notes: 'Adjuster contacted claimant for serial numbers and proof of purchase.',
-  },
-  {
-    claimantName: 'Diana Prince',
-    policyNumber: 'POL-004',
-    incidentDate: '2024-07-21',
-    incidentDescription: 'Theft of rare artifact from private collection. No forced entry, security system mysteriously offline.',
-    documentName: 'TheftStatement_DP.zip',
-    documentUri: '',
-    imageNames: ['empty_display_case.jpg'],
-    imageUris: ['https://placehold.co/150x100.png?text=EmptyCase'],
-    status: 'Rejected',
-    extractedInfo: {
-      claimedItem: { value: "Ancient Amazonian Shield", boundingBox: { x: 0.2, y: 0.3, width: 0.5, height: 0.04, page: 1 } },
-      estimatedValue: { value: "$500,000", boundingBox: { x: 0.2, y: 0.35, width: 0.2, height: 0.04, page: 1 } },
-      securityStatus: { value: "Offline - reason unknown", boundingBox: null }
-    },
-    fraudAssessment: { riskScore: 0.88, fraudIndicators: ["Extremely high value for a single item with limited provenance", "Security system conveniently offline", "No signs of forced entry reported", "Claimant has multiple recent high-value item insurance policies taken out.", "Similar MO to an unsolved case in another jurisdiction."], summary: "High probability of fraud. The circumstances of the alleged theft are highly suspicious and lack credible evidence. Multiple red flags. Recommend immediate rejection and referral to SIU." },
-    consistencyReport: {
-      status: 'Inconsistent',
-      summary: "Significant discrepancies found. The claimed artifact is not listed on the policy schedule. The reported incident date conflicts with travel records showing claimant was out of the country.",
-      details: [
-        { documentA: 'TheftStatement_DP.zip', documentB: 'Policy Schedule POL-004', field: 'Insured Item "Ancient Amazonian Shield"', valueA: 'Claimed', valueB: 'Not Listed', finding: 'Mismatch' },
-        { documentA: 'TheftStatement_DP.zip', documentB: 'Travel Records (External System)', field: 'Claimant Location on Incident Date', valueA: 'At Residence', valueB: 'Overseas (Themyscira)', finding: 'Mismatch' }
-      ]
-    },
-    notes: 'Claim rejected due to strong evidence of misrepresentation and potential fraud. Referred to Special Investigations Unit.',
+    notes: 'Awaiting adjuster review and any external reports.',
   }
 ];
 
+const initialProcessedStaticClaims = processSeedForInitialState(staticDemoAppContextClaimsSeed);
+
+// Firestore Seeding Data (different from initial static state to show DB override)
+const initialClaimsSeedForFirestore: (Omit<Claim, 'submissionDate' | 'lastUpdatedDate' | 'id'> & { id: string })[] = [
+  {
+    id: 'clm_fs_alice_123',
+    claimantName: 'Alice Wonderland (FS)',
+    policyNumber: 'POL-FS-001',
+    incidentDate: '2024-07-15',
+    incidentDescription: 'Minor fender bender in parking lot. Scratches on rear bumper. From Firestore.',
+    documentName: 'AccidentReport_FS.pdf',
+    documentUri: '',
+    imageNames: ['fs_damage_front.jpg', 'fs_damage_side.jpg'],
+    imageUris: ['https://placehold.co/150x100.png?text=FS_Img1', 'https://placehold.co/150x100.png?text=FS_Img2'],
+    videoName: 'fs_dashcam_footage.mp4',
+    videoUri: 'https://placehold.co/160x90.png?text=FS_Vid1',
+    status: 'Pending',
+    extractedInfo: { policyNumber: { value: "POL-FS-001" } },
+    fraudAssessment: { riskScore: 0.1, fraudIndicators: ["Low impact"], summary: "Low risk (FS)." },
+    consistencyReport: { status: 'Consistent', summary: 'Details align (FS).' },
+    notes: 'Awaiting FS adjuster review.',
+  },
+  {
+    id: 'clm_fs_bob_456',
+    claimantName: 'Bob The Builder (FS)',
+    policyNumber: 'POL-FS-002',
+    incidentDate: '2024-07-18',
+    incidentDescription: 'Water damage from burst pipe in kitchen. From Firestore.',
+    documentName: 'PlumberInvoice_FS.pdf',
+    documentUri: '',
+    status: 'Approved',
+    extractedInfo: { invoiceTotal: { value: "$550" } },
+    fraudAssessment: { riskScore: 0.05, fraudIndicators: [], summary: "Approved (FS)." },
+    consistencyReport: { status: 'Consistent', summary: 'All good (FS).' },
+    notes: 'FS Payment processed.',
+  },
+];
+
+
 const initialNotifications: AppNotification[] = [
-  { id: 'notif_1749303223456', title: 'Claim Submitted', message: 'Claim #clm_1749303123456... by Alice Wonderland received.', type: 'success', timestamp: new Date('2024-07-20T10:00:00Z').toISOString(), read: false, claimId: 'clm_1749303123456_abc' },
-  { id: 'notif_1749303223789', title: 'Claim Approved', message: 'Claim #clm_1749303123789... for Bob The Builder has been approved.', type: 'success', timestamp: new Date('2024-07-22T09:15:00Z').toISOString(), read: true, claimId: 'clm_1749303123789_def' },
+  { id: 'notif_1749303223456', title: 'Claim Submitted', message: 'Claim #static_demo_approved_123... by Carol Danvers received.', type: 'success', timestamp: new Date('2024-07-20T10:00:00Z').toISOString(), read: false, claimId: 'static_demo_approved_123' },
+  { id: 'notif_1749303223789', title: 'Claim Status Update', message: 'Claim #static_demo_pending_456... for Peter Parker is now Under Review.', type: 'info', timestamp: new Date('2024-07-22T09:15:00Z').toISOString(), read: true, claimId: 'static_demo_pending_456' },
 ];
 
 
@@ -160,7 +182,7 @@ interface AppContextType {
   markNotificationAsRead: (notificationId: string) => void;
   clearNotifications: () => void;
   isLoading: boolean;
-  isContextLoading: boolean;
+  isContextLoading: boolean; // Kept for potential other uses, but claim details page less reliant
   isKycVerifiedForSession: boolean;
   completeKycSession: () => void;
   resetKycSession: () => void;
@@ -189,9 +211,9 @@ const defaultConsistencyReport: ConsistencyReport = {
 
 
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [claims, setClaims] = useState<Claim[]>([]);
+  const [claims, setClaims] = useState<Claim[]>(initialProcessedStaticClaims); // Initialize with static demo claims
   const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
-  const [isLoading, setIsLoading] = useState(true); // General loading for initial setup
+  const [isLoading, setIsLoading] = useState(true); 
   const [isKycVerifiedForSession, setIsKycVerifiedForSession] = useState(false);
   const notificationIdCounter = useRef(initialNotifications.length);
 
@@ -200,56 +222,39 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   useEffect(() => {
     const fetchAndSeedClaims = async () => {
-      setIsLoading(true);
+      setIsLoading(true); // Still set global loading for the fetch operation
+      console.log("AppContext: fetchAndSeedClaims started.");
       const claimsCollectionRef = collection(db, "claims");
       const q = query(claimsCollectionRef, orderBy("submissionDate", "desc"));
 
       try {
         const querySnapshot = await getDocs(q);
         if (querySnapshot.empty) {
-          console.log("Firestore 'claims' collection is empty. Seeding initial data...");
+          console.log("AppContext: Firestore 'claims' collection is empty. Seeding initial data from initialClaimsSeedForFirestore...");
           const batch = writeBatch(db);
-          const seededClaimIds = [
-            'clm_1749303123456_abc',
-            'clm_1749303123789_def',
-            'clm_1749303300000_ghi',
-            'clm_1749303400000_jkl'
-          ];
+          
+          const processedSeedForFirestore = processSeedForInitialState(initialClaimsSeedForFirestore);
 
-          initialClaimsSeed.forEach((claimData, index) => {
-            const claimId = seededClaimIds[index] || `clm_seed_${Date.now()}_${index}`;
-            const docRef = doc(db, "claims", claimId);
-            const submissionDate = Timestamp.fromDate(new Date(Date.now() - (initialClaimsSeed.length - 1 - index) * 24 * 60 * 60 * 1000 * 2));
-            const lastUpdatedDate = claimData.status !== 'Pending' ?
-                                     Timestamp.fromDate(new Date(submissionDate.toDate().getTime() + (Math.random() * 24 + 12) * 60 * 60 * 1000)) :
-                                     submissionDate;
-
-            let finalDocumentUri = claimData.documentUri;
-            const documentNameLower = claimData.documentName?.toLowerCase() || '';
-            const isProblematicTypeForSeedMedia = documentNameLower.endsWith('.docx') || documentNameLower.endsWith('.doc') || documentNameLower.endsWith('.zip');
-
-            if (!finalDocumentUri || isProblematicTypeForSeedMedia) {
-                 const textContent = `Document Name: ${claimData.documentName}\nDocument Type: ${documentNameLower.endsWith('.pdf') ? 'PDF Document' : documentNameLower.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? 'Image' : documentNameLower.endsWith('.zip') ? 'ZIP Archive' : 'General Document'}\nClaimant: ${claimData.claimantName}\nPolicy Number: ${claimData.policyNumber}\nIncident Date: ${claimData.incidentDate}\nDescription: ${claimData.incidentDescription}\nExtracted Info Sample (if any): ${JSON.stringify(Object.keys(claimData.extractedInfo || {}).slice(0,2).reduce((acc, key) => { acc[key] = (claimData.extractedInfo as any)[key].value; return acc; }, {} as any))}`;
-                 finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
-            }
-
+          processedSeedForFirestore.forEach((claimData) => {
+            const docRef = doc(db, "claims", claimData.id); // Use predefined ID from seed
+            const submissionTimestamp = Timestamp.fromDate(new Date(claimData.submissionDate));
+            const lastUpdatedTimestamp = Timestamp.fromDate(new Date(claimData.lastUpdatedDate));
+            
             batch.set(docRef, {
-              ...claimData,
-              id: claimId,
-              documentUri: finalDocumentUri,
-              submissionDate: submissionDate,
-              lastUpdatedDate: lastUpdatedDate,
+              ...claimData, // Spread all fields from processedClaim
+              submissionDate: submissionTimestamp,
+              lastUpdatedDate: lastUpdatedTimestamp,
             });
           });
           await batch.commit();
-          console.log("Initial data seeded to Firestore.");
-          addNotification({title: "Sample Claims Seeded", message: "Initial sample claims have been added to the database.", type: "info"});
-          const seededSnapshot = await getDocs(q); // Re-fetch after seeding
-          const fetchedClaims = seededSnapshot.docs.map(doc => {
-            const data = doc.data();
+          console.log("AppContext: Initial data (initialClaimsSeedForFirestore) seeded to Firestore.");
+          addNotification({title: "Sample Claims Seeded to DB", message: "Initial sample claims have been added to the database.", type: "info"});
+          const seededSnapshot = await getDocs(q); 
+          const fetchedClaims = seededSnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
             return {
               ...data,
-              id: doc.id,
+              id: docSnap.id,
               submissionDate: (data.submissionDate as Timestamp)?.toDate().toISOString(),
               lastUpdatedDate: (data.lastUpdatedDate as Timestamp)?.toDate().toISOString(),
             } as Claim;
@@ -257,11 +262,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           setClaims(fetchedClaims);
 
         } else {
-          console.log("Firestore 'claims' collection has data. Fetching...");
-          const fetchedClaims = querySnapshot.docs.map(doc => {
-            const data = doc.data();
+          console.log("AppContext: Firestore 'claims' collection has data. Fetching...");
+          const fetchedClaims = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
              let finalDocumentUri = data.documentUri;
-             // If documentUri is missing but documentName exists, create a placeholder text URI
              if (!finalDocumentUri && data.documentName) {
                 const textContent = `Document: ${data.documentName}\nClaimant: ${data.claimantName}\nPolicy Number: ${data.policyNumber}\nIncident Date: ${data.incidentDate}\nDescription: ${data.incidentDescription}`;
                 finalDocumentUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(textContent)))}`;
@@ -269,27 +273,40 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
             return {
               ...data,
-              id: doc.id,
-              documentUri: finalDocumentUri, // Use updated finalDocumentUri
+              id: docSnap.id,
+              documentUri: finalDocumentUri, 
               submissionDate: (data.submissionDate as Timestamp)?.toDate().toISOString(),
               lastUpdatedDate: (data.lastUpdatedDate as Timestamp)?.toDate().toISOString(),
             } as Claim;
           });
           setClaims(fetchedClaims);
-          console.log("Claims fetched from Firestore.");
+          console.log("AppContext: Claims fetched from Firestore and replaced initial static claims.");
         }
       } catch (error) {
-        console.error("Error fetching or seeding claims from Firestore:", error);
-        addNotification({ title: "Database Error", message: `Could not load claims data. Details: ${error instanceof Error ? error.message : String(error)}`, type: "error" });
+        console.error("AppContext: Error fetching or seeding claims from Firestore:", error);
+        // Keep initial static claims if Firestore fetch fails
+        addNotification({ title: "Database Error", message: `Could not load claims from Firestore. Displaying demo claims. Details: ${error instanceof Error ? error.message : String(error)}`, type: "error" });
       } finally {
         setIsLoading(false);
-        console.log("Initial claim fetching/seeding process complete. isLoading set to false.");
+        console.log("AppContext: Initial claim fetching/seeding process complete. isLoading set to false.");
       }
     };
 
-    fetchAndSeedClaims();
+    // Ensure Firebase .env variables are loaded before this runs.
+    // A short delay can sometimes help in dev if env vars are slow to load for firebase.initializeApp
+    const timer = setTimeout(() => {
+        if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID !== "undefined") {
+            fetchAndSeedClaims();
+        } else {
+            console.warn("AppContext: Firebase Project ID is undefined. Firestore operations will fail. Skipping fetchAndSeedClaims. Using static demo claims.");
+            addNotification({title: "Firebase Not Configured", message: "Firebase Project ID is missing. Using static demo claims.", type: "warning"});
+            setIsLoading(false); // Stop loading if Firebase isn't configured
+        }
+    }, 100); // Short delay
+    
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // addNotification is stable
+  }, []); 
 
 
   const addNotification = useCallback((notificationData: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
@@ -300,7 +317,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       timestamp: new Date().toISOString(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); // Keep max 20 notifications
+    setNotifications(prev => [newNotification, ...prev].slice(0, 20)); 
   }, []);
 
   const resetKycSession = useCallback(() => {
@@ -309,7 +326,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addClaim = useCallback(async (newClaimData: NewClaimFormData): Promise<Claim | null> => {
     console.log("addClaim: Started");
-    setIsLoading(true); // Use the main isLoading for the whole addClaim process
+    setIsLoading(true); 
     let newClaimId = `clm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     let currentExtractedInfoResult: Record<string, ExtractedFieldWithOptionalBox> = { ...defaultExtractedInfo };
@@ -318,7 +335,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     let docTypeForProcessing: string | undefined;
     let isDocDirectlyProcessableForMedia = false;
-
+    
     try {
       console.log("addClaim: Main try block entered");
       if (newClaimData.documentUri && newClaimData.documentName) {
@@ -336,82 +353,70 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           const supportedMimeTypesForMediaHelper = [
             'image/jpeg', 'image/png', 'image/webp', 'image/gif',
             'application/pdf', 'text/plain',
-            // Note: 'application/msword' and 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            // are generally NOT supported by Gemini's {{media}} helper directly.
           ];
           if (supportedMimeTypesForMediaHelper.includes(mimeType)) {
             isDocDirectlyProcessableForMedia = true;
           }
         }
-        // Override if document type implies non-direct processing (e.g. complex types like docx, zip)
         if (docTypeForProcessing === 'General Document' || docTypeForProcessing === 'ZIP Archive' || docTypeForProcessing === 'Other Document') {
             isDocDirectlyProcessableForMedia = false;
         }
         console.log(`addClaim: Document type determined: ${docTypeForProcessing}, Directly processable for media: ${isDocDirectlyProcessableForMedia}`);
-        try {
-          console.log("addClaim: Before extractDocumentInformation call");
-          const extractionInput = {
-            documentDataUri: newClaimData.documentUri,
-            documentType: docTypeForProcessing,
-            documentName: newClaimData.documentName,
-            isDirectlyProcessableMedia: isDocDirectlyProcessableForMedia,
-          };
-          const extractionOutput = await extractDocumentInformation(extractionInput);
-          console.log("addClaim: After extractDocumentInformation call", extractionOutput);
-          if (extractionOutput && extractionOutput.extractedFieldsJson) {
-             try {
-                const parsedJson = JSON.parse(extractionOutput.extractedFieldsJson);
-                currentExtractedInfoResult = parsedJson as Record<string, ExtractedFieldWithOptionalBox>;
-                addNotification({ title: 'Document Processed', message: `Info extracted from ${newClaimData.documentName}.`, type: 'success', claimId: newClaimId });
-              } catch (e) {
-                console.error("Failed to parse extractedFieldsJson string:", e);
-                currentExtractedInfoResult = { parsingError: { value: "Failed to parse AI response for extracted information." }, ...defaultExtractedInfo };
-                addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON.`, type: 'error', claimId: newClaimId });
-              }
-          } else {
-             console.log("addClaim: Document extraction returned no JSON or was skipped.");
-             addNotification({ title: 'Document Processing Skipped', message: `No information extracted from ${newClaimData.documentName}.`, type: 'info', claimId: newClaimId });
-          }
-        } catch (error) {
-          console.error("Error processing document with AI (extractDocumentInformation):", error);
-          addNotification({ title: 'Document Processing Failed', message: `AI could not extract info from ${newClaimData.documentName}. Details: ${error instanceof Error ? error.message : String(error)}`, type: 'error', claimId: newClaimId });
-          // currentExtractedInfoResult remains default
+        
+        console.log("addClaim: Before extractDocumentInformation call");
+        const extractionInput = {
+          documentDataUri: newClaimData.documentUri,
+          documentType: docTypeForProcessing,
+          documentName: newClaimData.documentName,
+          isDirectlyProcessableMedia: isDocDirectlyProcessableForMedia,
+        };
+        const extractionOutput = await extractDocumentInformation(extractionInput);
+        console.log("addClaim: After extractDocumentInformation call", extractionOutput);
+        if (extractionOutput && extractionOutput.extractedFieldsJson) {
+           try {
+              const parsedJson = JSON.parse(extractionOutput.extractedFieldsJson);
+              currentExtractedInfoResult = parsedJson as Record<string, ExtractedFieldWithOptionalBox>;
+              addNotification({ title: 'Document Processed', message: `Info extracted from ${newClaimData.documentName}.`, type: 'success', claimId: newClaimId });
+            } catch (e) {
+              console.error("Failed to parse extractedFieldsJson string:", e);
+              currentExtractedInfoResult = { parsingError: { value: "Failed to parse AI response for extracted information." }, ...defaultExtractedInfo };
+              addNotification({ title: 'Document Parsing Error', message: `Could not parse extracted info for ${newClaimData.documentName}. Invalid JSON.`, type: 'error', claimId: newClaimId });
+            }
+        } else {
+           console.log("addClaim: Document extraction returned no JSON or was skipped.");
+           currentExtractedInfoResult = { ...defaultExtractedInfo, processingStatus: {value: "Extraction did not return expected JSON data or was skipped."}};
+           addNotification({ title: 'Document Processing Skipped', message: `No information extracted from ${newClaimData.documentName}.`, type: 'info', claimId: newClaimId });
         }
       } else {
         console.log("addClaim: No document URI or name provided. Skipping document processing.");
+        currentExtractedInfoResult = { ...defaultExtractedInfo, processingStatus: {value: "No document was provided for extraction."}};
       }
 
-      try {
-        console.log("addClaim: Before assessFraudRisk call");
-        const assessmentInput = {
-          claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(currentExtractedInfoResult || {})}`,
-          supportingDocumentUri: newClaimData.documentUri,
-          supportingDocumentName: newClaimData.documentName, // Pass name
-          supportingDocumentType: docTypeForProcessing,       // Pass determined type
-          isSupportingDocumentDirectlyProcessable: isDocDirectlyProcessableForMedia, // Pass flag
-          imageEvidenceUris: newClaimData.imageUris,
-          videoEvidenceUri: newClaimData.videoUri,
-          // claimHistory: "..." // Consider adding if available
-        };
-        const aiOutput = await assessFraudRisk(assessmentInput);
-        console.log("addClaim: After assessFraudRisk call", aiOutput);
-        if (aiOutput) {
-            fraudAssessmentResult = aiOutput;
-            addNotification({ title: 'Fraud Assessment Complete', message: `Risk score: ${fraudAssessmentResult.riskScore.toFixed(2)} for claim by ${newClaimData.claimantName}.`, type: 'info', claimId: newClaimId });
-        } else {
-            console.log("addClaim: Fraud assessment returned no data.");
-            addNotification({ title: 'Fraud Assessment Incomplete', message: `AI returned no data for fraud assessment of ${newClaimData.claimantName}'s claim.`, type: 'warning', claimId: newClaimId });
-            // fraudAssessmentResult remains default
-        }
-      } catch (error) {
-        console.error("Error assessing fraud risk (assessFraudRisk):", error);
-        addNotification({ title: 'Fraud Assessment Failed', message: `Could not assess fraud risk for ${newClaimData.claimantName}. Details: ${error instanceof Error ? error.message : String(error)}`, type: 'error', claimId: newClaimId });
-        // fraudAssessmentResult remains default
+      console.log("addClaim: Before assessFraudRisk call");
+      const assessmentInput = {
+        claimDetails: `${newClaimData.claimantName} - ${newClaimData.incidentDescription}. Policy: ${newClaimData.policyNumber}. Incident Date: ${newClaimData.incidentDate}. Extracted Info: ${JSON.stringify(currentExtractedInfoResult || {})}`,
+        supportingDocumentUri: newClaimData.documentUri,
+        supportingDocumentName: newClaimData.documentName, 
+        supportingDocumentType: docTypeForProcessing,       
+        isSupportingDocumentDirectlyProcessable: isDocDirectlyProcessableForMedia, 
+        imageEvidenceUris: newClaimData.imageUris,
+        videoEvidenceUri: newClaimData.videoUri,
+      };
+      const aiOutput = await assessFraudRisk(assessmentInput);
+      console.log("addClaim: After assessFraudRisk call", aiOutput);
+      if (aiOutput) {
+          fraudAssessmentResult = aiOutput;
+          addNotification({ title: 'Fraud Assessment Complete', message: `Risk score: ${fraudAssessmentResult.riskScore.toFixed(2)} for claim by ${newClaimData.claimantName}.`, type: 'info', claimId: newClaimId });
+      } else {
+          console.log("addClaim: Fraud assessment returned no data.");
+          fraudAssessmentResult = { ...defaultFraudAssessment, summary: "AI returned no data for fraud assessment."};
+          addNotification({ title: 'Fraud Assessment Incomplete', message: `AI returned no data for fraud assessment of ${newClaimData.claimantName}'s claim.`, type: 'warning', claimId: newClaimId });
       }
+      
 
       console.log("addClaim: Simulating consistency report");
       if (newClaimData.documentUri && currentExtractedInfoResult !== defaultExtractedInfo && fraudAssessmentResult !== defaultFraudAssessment) {
-        const isConsistent = Math.random() > 0.4; // Simulate consistency
+        const isConsistent = Math.random() > 0.4; 
         const primaryDocName = newClaimData.documentName || "Submitted Claim Document";
         const secondaryDocTypes = ["Police Report (on file)", "Witness Statement (on file)", "Internal System Record"];
         const secondaryDocName = secondaryDocTypes[Math.floor(Math.random() * secondaryDocTypes.length)];
@@ -419,9 +424,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const fieldForComparison = commonFields[Math.floor(Math.random() * commonFields.length)];
 
         const getExtractedValue = (fieldName: string) => {
-            // Attempt to find a case-insensitive, space-agnostic match for the field name in extractedInfo
             const key = Object.keys(currentExtractedInfoResult || {}).find(k => k.toLowerCase().replace(/\s/g, '') === fieldName.toLowerCase().replace(/\s/g, ''));
-            // Fallback to newClaimData if not found in extractedInfo
             return key ? String((currentExtractedInfoResult?.[key] as ExtractedFieldWithOptionalBox)?.value || "N/A") : String(newClaimData[fieldName.toLowerCase().replace(/\s/g, '') as keyof NewClaimFormData] || "N/A");
         };
 
@@ -433,9 +436,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           };
         } else {
           const valueA = getExtractedValue(fieldForComparison);
-          let valueB = "Different Value B - " + Math.random().toString(36).substring(7); // Placeholder for a differing value
+          let valueB = "Different Value B - " + Math.random().toString(36).substring(7); 
           if (fieldForComparison === "Incident Date" && newClaimData.incidentDate) { valueB = new Date(Date.parse(newClaimData.incidentDate) - (Math.floor(Math.random() * 5) + 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; }
-          else if (fieldForComparison === "Claimant Name") { valueB = newClaimData.claimantName.split(" ")[0] + " Smithson"; } // Simulate a slightly different name
+          else if (fieldForComparison === "Claimant Name") { valueB = newClaimData.claimantName.split(" ")[0] + " Smithson"; } 
           consistencyReportResult = { status: 'Inconsistent', summary: `Discrepancy noted in "${fieldForComparison}" between ${primaryDocName} and ${secondaryDocName}. Review recommended.`, details: [{ documentA: primaryDocName, documentB: secondaryDocName, field: fieldForComparison, valueA: valueA, valueB: valueB, finding: 'Mismatch', }], };
         }
         addNotification({ title: 'Consistency Check Simulated', message: `Consistency: ${consistencyReportResult.status} for ${newClaimData.claimantName}'s claim.`, type: 'info', claimId: newClaimId });
@@ -461,12 +464,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         status: 'Pending' as ClaimStatus,
         submissionDate: now,
         lastUpdatedDate: now,
-        extractedInfo: currentExtractedInfoResult || defaultExtractedInfo,
-        fraudAssessment: fraudAssessmentResult || defaultFraudAssessment,
-        consistencyReport: consistencyReportResult || defaultConsistencyReport,
+        extractedInfo: currentExtractedInfoResult,
+        fraudAssessment: fraudAssessmentResult,
+        consistencyReport: consistencyReportResult,
         notes: '',
       };
       console.log("addClaim: Before Firestore setDoc", newClaimForDb);
+      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === "undefined") {
+        console.error("addClaim: Firebase Project ID is undefined. Cannot save to Firestore.");
+        throw new Error("Firebase Project ID is not configured. Cannot save claim.");
+      }
       await setDoc(doc(db, "claims", newClaimId), newClaimForDb);
       console.log("addClaim: After Firestore setDoc");
 
@@ -494,7 +501,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.log("addClaim: Main finally block reached. Setting isLoading to false.");
       setIsLoading(false);
     }
-  }, [addNotification, resetKycSession]); // isLoading dependency removed from here as it's managed internally
+  }, [addNotification, resetKycSession]); 
 
   const updateClaimStatus = async (claimId: string, status: ClaimStatus, notes?: string) => {
     setIsLoading(true);
@@ -509,7 +516,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
 
     try {
-      await updateDoc(claimDocRef, updateData);
+      if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID === "undefined") {
+        console.error("updateClaimStatus: Firebase Project ID is undefined. Cannot update Firestore.");
+        throw new Error("Firebase Project ID is not configured. Cannot update claim.");
+      }
+      await updateDoc(claimDocRef, updateData as any); // Using 'as any' due to complex partial type with Timestamp
       setClaims(prevClaims =>
         prevClaims.map(claim => {
           if (claim.id === claimId) {
@@ -561,7 +572,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return errorMsg;
     }
     setIsAskingQuestion(true);
-    setQaAnswer(null); // Clear previous answer
+    setQaAnswer(null); 
     try {
       const result = await qaOnDocument({ documentDataUri, question });
       setQaAnswer(result.answer);
@@ -593,8 +604,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNotification,
         markNotificationAsRead,
         clearNotifications,
-        isLoading: isLoading, // This reflects the general loading state of the context (e.g., initial load)
-        isContextLoading: isLoading, // Alias for broader context loading
+        isLoading: isLoading, 
+        isContextLoading: isLoading, 
         isKycVerifiedForSession,
         completeKycSession,
         resetKycSession,
