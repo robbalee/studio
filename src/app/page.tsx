@@ -37,16 +37,15 @@ export default function WelcomePage() {
           A simpler, intelligent way to fill your insurance claims. We're transforming the claims journey for our users.
         </p>
         <div className="grid md:grid-cols-2 gap-8 items-center max-w-4xl w-full mb-12">
-          <div className="relative aspect-[4/3] md:aspect-video rounded-lg overflow-hidden shadow-2xl group">
+          <div className="rounded-lg overflow-hidden shadow-2xl group">
             <Image
               src="https://storage.googleapis.com/generative-ai-for-developers/images/insurance_claim_illustration.png"
               alt="ClaimIntel in action"
-              layout="fill"
-              objectFit="cover"
-              className="group-hover:scale-105 transition-transform duration-300"
-              
+              width={600}
+              height={450}
+              className="group-hover:scale-105 transition-transform duration-300 w-full h-auto max-w-xl mx-auto"
+              priority
             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
           </div>
           <div className="flex flex-col gap-6 text-left">
             <FeatureItem
@@ -136,16 +135,15 @@ export default function WelcomePage() {
             </Card>
 
             <div className="flex flex-col items-center text-left">
-               <div className="relative aspect-video w-full rounded-lg overflow-hidden shadow-xl group mb-4">
+               <div className="rounded-lg overflow-hidden shadow-xl group mb-4">
                 <Image
                   src="https://placehold.co/500x281.png"
                   alt="AI processing illustration"
-                  layout="fill"
-                  objectFit="cover"
+                  width={500}
+                  height={281}
                   data-ai-hint="data analytics dashboard"
-                  className="group-hover:scale-105 transition-transform duration-300"
+                  className="group-hover:scale-105 transition-transform duration-300 w-full h-auto max-w-lg mx-auto"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </div>
               <h4 className="text-lg font-semibold text-foreground mt-2">Unlock Actionable Intelligence</h4>
               <p className="text-muted-foreground text-sm">
