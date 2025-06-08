@@ -1,4 +1,5 @@
 
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, Smartphone, Zap, CheckCircle2, Quote, Star, Car, Camera, Video, FileUp, BrainCircuit, ArrowRight, BrainCog, SearchCheck, Sparkles, User, Users, Home, PlaneTakeoff, Edit, ShieldX } from 'lucide-react';
@@ -187,15 +188,13 @@ export default function WelcomePage() {
           <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-8">
             <SuccessStoryCard
               quote="I couldn't believe how fast my claim was processed! What used to take weeks was sorted in days."
-              story="After a minor car accident, Sarah was dreading the usual lengthy claims process. With ClaimIntel, she submitted her documents and photos from her phone in minutes. Her claim was reviewed and approved within 48 hours."
-              name="Sarah M."
-              imageSrc="/images/happy-person.png"
+              story="After a minor car accident, Robi was dreading the usual lengthy claims process. With ClaimIntel, he submitted his documents and photos from his phone in minutes. His claim was reviewed and approved within 48 hours."
+              name="Robi"
             />
             <SuccessStoryCard
               quote="ClaimIntel made submitting my water damage claim so straightforward. No confusing forms, just a simple process."
-              story="When a pipe burst in David's kitchen, he was overwhelmed. ClaimIntel's guided submission process helped him upload all necessary information, including videos of the damage, leading to a quick assessment and approval for repairs."
-              name="David K."
-              imageSrc="/images/satisfied-customer.png"
+              story="When a pipe burst in Kacpersky's kitchen, he was overwhelmed. ClaimIntel's guided submission process helped him upload all necessary information, including videos of the damage, leading to a quick assessment and approval for repairs."
+              name="Kacpersky"
             />
           </div>
         </section>
@@ -303,10 +302,9 @@ interface SuccessStoryCardProps {
   quote: string;
   story: string;
   name: string;
-  imageSrc: string;
 }
 
-function SuccessStoryCard({ quote, story, name, imageSrc }: SuccessStoryCardProps) {
+function SuccessStoryCard({ quote, story, name }: SuccessStoryCardProps) {
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow bg-card/70 backdrop-blur-sm text-left">
       <CardHeader className="pb-3">
@@ -323,13 +321,7 @@ function SuccessStoryCard({ quote, story, name, imageSrc }: SuccessStoryCardProp
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">{story}</p>
         <div className="flex items-center gap-3 pt-2">
-          <Image
-            src={imageSrc}
-            alt={name}
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
+          {/* Profile image removed */}
           <p className="text-sm font-semibold text-foreground">{name}</p>
         </div>
       </CardContent>
@@ -338,3 +330,4 @@ function SuccessStoryCard({ quote, story, name, imageSrc }: SuccessStoryCardProp
 }
 
     
+
